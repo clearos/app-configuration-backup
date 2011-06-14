@@ -45,29 +45,27 @@ if ($error)
 
 
 echo form_open_multipart('configuration_backup/upload');
-echo form_header(lang('configuration_backup_TODO'));
+echo form_header(lang('configuration_backup_restore_from_archive'));
 
 ///////////////////////////////////////////////////////////////////////////////
 // Form fields and buttons
 ///////////////////////////////////////////////////////////////////////////////
 
 
-if ($import_ready)
+if ($restore_ready)
     $buttons = array(
-        form_submit_custom('start', lang('configuration_backup_start_import'), 'high'),
-        form_submit_custom('reset', lang('base_reset'), 'high')
+        form_submit_custom('restore', lang('configuration_backup_restore'), 'high'),
+        form_submit_custom('cancel', lang('base_cancel'), 'low')
     );
 else
     $buttons = array(
         form_submit_custom('upload', lang('configuration_backup_upload'), 'high'),
-        anchor_custom('configuration_backup/template', lang('configuration_backup_download_template'), 'low')
     );
 
-echo field_file('csv_file', $filename, lang('configuration_backup_csv_file'), $import_ready);
+echo field_file('restore_file', $filename, lang('configuration_backup_restore_file'), $restore_ready);
 
-if ($import_ready) {
-    echo field_file('size', $size, lang('configuration_backup_size'), $import_ready);
-    echo field_file('number', $number_of_records, lang('configuration_backup_number_of_records'), $import_ready);
+if ($restore_ready) {
+    echo field_file('size', $size, lang('configuration_backup_size'), $restore_ready);
 }
 
 echo button_set($buttons);

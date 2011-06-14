@@ -57,7 +57,6 @@ class Upload extends ClearOS_Controller
     function __construct()
     {
         parent::__construct();
-        //$this->load->helper(array('form', 'url'));
     }
 
     function index()
@@ -72,33 +71,30 @@ class Upload extends ClearOS_Controller
         // Handle form submit
         //-------------------
 
-        if ($this->input->post('reset')) {
+        if ($this->input->post('cancel')) {
             try {
-                $this->configuration_backup->delete_backup_file();
+                $this->configuration_backup->delete_backup_file(CLEAROS_TEMP_DIR . '/' . $_POST['filename']);
                 redirect('/configuration_backup');
             } catch (Exception $e) {
-                $this->page->view_exception($e);
-                return;
+                redirect('/configuration_backup');
             }
-        } if ($this->input->post('start')) {
+        } if ($this->input->post('restore')) {
             redirect('/configuration_backup/progress');
         }
         $config['upload_path'] = CLEAROS_TEMP_DIR;
-        $config['allowed_types'] = 'backup';
+        $config['allowed_types'] = 'tgz';
         $config['overwrite'] = TRUE;
-        $config['file_name'] = Configuration_Backup::FILE_CSV;
 
         $this->load->library('upload', $config);
 
-        if ( ! $this->upload->do_upload('backup_file')) {
+        if ( ! $this->upload->do_upload('restore_file')) {
             $data['error'] = $this->upload->display_errors();
         } else {
             $upload = $this->upload->data();
             $this->configuration_backup->set_backup_file($upload['file_name']);
             $data['filename'] = $upload['file_name'];
-            $data['import_ready'] = TRUE;
+            $data['restore_ready'] = TRUE;
             $data['size'] = byte_format($this->configuration_backup->get_backup_size(), 1);
-//            $data['number_of_records'] = $this->configuration_backup->get_number_of_records();
         }
         $this->page->view_form('overview', $data, lang('configuration_backup_configuration_backup'));
     }

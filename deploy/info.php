@@ -20,7 +20,7 @@ $app['description'] = lang('configuration_backup_app_long_description');
 
 $app['name'] = 'Configuration Backup/Restore';
 $app['category'] = lang('base_category_system');
-$app['subcategory'] = 'TODO';
+$app['subcategory'] = lang('base_subcategory_backup');
 
 /////////////////////////////////////////////////////////////////////////////
 // Packaging

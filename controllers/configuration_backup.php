@@ -69,12 +69,6 @@ class Configuration_Backup extends ClearOS_Controller
         $this->load->library('configuration_backup/Configuration_Backup');
         $this->lang->load('configuration_backup');
 
-        $data['import_ready'] = $this->configuration_backup->is_backup_file_uploaded();
-
-        if ($data['import_ready']) {
-            $data['size'] = byte_format($this->configuration_backup->get_backup_size(), 1);
-        }
-
         // Load views
         //-----------
 

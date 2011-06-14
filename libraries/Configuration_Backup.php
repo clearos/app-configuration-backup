@@ -103,9 +103,8 @@ class Configuration_Backup
     ///////////////////////////////////////////////////////////////////////////////
 
     const FILE_CONFIG = '/etc/backup.conf';
-    const FILE_BACKUP = 'backup.tgz';
-    const PATH_ARCHIVE = '/var/lib/backuprestore';
-    const PATH_UPLOAD = '/var/lib/backuprestore/upload';
+    const FOLDER_BACKUP = '/var/clearos/configuration_backup';
+    const FOLDER_UPLOAD = '/var/clearos/configuration_backup/upload';
     const CMD_TAR = '/bin/tar';
     const CMD_LS = '/bin/ls';
     const FILE_LIMIT = 10; // Maximum number of archives to keep
@@ -460,7 +459,7 @@ class Configuration_Backup
                 throw new File_Not_Found_Exception(clearos_exception_message($e), CLEAROS_ERROR);
 
             // Move uploaded file to cache
-            $file->move_to(CLEAROS_CACHE_DIR . '/' . self::FILE_backup);
+            $file->move_to(self::FOLDER_UPLOAD . '/' . $filename);
             $file->chown('root','root'); 
             $file->chmod(600);
         } catch (File_Not_Found_Exception $e) {
@@ -471,42 +470,48 @@ class Configuration_Backup
     }
 
     /**
-     * Is backup file uploaded.
-     *
-     * @return boolean true/FALSE
-     * @throws Engine_Exception, File_Not_Found_Exception
-     */
-
-    function is_backup_file_uploaded()
-    {
-        clearos_profile(__METHOD__, __LINE__);
-
-        try {
-            $file = new File(CLEAROS_CACHE_DIR . '/' . self::FILE_BACKUP, TRUE);
-            if (!$file->exists())
-                return FALSE;
-            return TRUE;
-        } catch (Exception $e) {
-            return FALSE;
-        }
-    }
-
-    /**
      * Resets (deletes) the backup file.
+     *
+     * @param string $filename filename
      *
      * @return void
      * @throws Engine_Exception, File_Not_Found_Exception
      */
 
-    function delete_backup_file()
+    function delete_backup_file($filename)
     {
         clearos_profile(__METHOD__, __LINE__);
 
         try {
-            $file = new File(CLEAROS_CACHE_DIR . '/' . self::FILE_backup, TRUE);
+            $file = new File(self::FOLDER_UPLOAD . '/' . $filename, TRUE);
             if (!$file->exists())
                 throw new File_Not_Found_Exception(lang('configuration_backup_backup_not_uploaded'), CLEAROS_ERROR);
             $file->delete();
+        } catch (File_Not_Found_Exception $e) {
+            throw new File_Not_Found_Exception(clearos_exception_message($e), CLEAROS_ERROR);
+        } catch (Exception $e) {
+            throw new Engine_Exception(clearos_exception_message($e), CLEAROS_ERROR);
+        }
+    }
+
+    /**
+     * Fetches the size of a backup file.
+     *
+     * @param string $filename filename
+     *
+     * @return integer size 
+     * @throws Engine_Exception, File_Not_Found_Exception
+     */
+
+    function get_backup_size($filename)
+    {
+        clearos_profile(__METHOD__, __LINE__);
+
+        try {
+            $file = new File(self::FOLDER_UPLOAD . '/' . $filename, TRUE);
+            if (!$file->exists())
+                throw new File_Not_Found_Exception(lang('configuration_backup_backup_not_found'), CLEAROS_ERROR);
+            return $file->get_size();
         } catch (File_Not_Found_Exception $e) {
             throw new File_Not_Found_Exception(clearos_exception_message($e), CLEAROS_ERROR);
         } catch (Exception $e) {
