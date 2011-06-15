@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Configuration Backup and Restore overview.
+ * Configuration Backup and Restore archive.
  *
  * @category   Apps
  * @package    Configuration_Backup
@@ -36,43 +36,23 @@
 $this->lang->load('base');
 $this->lang->load('configuration_backup');
 
-if ($error)
-   echo infobox_critical(lang('configuration_backup_upload_error'), $error);
+$items = array();
 
-///////////////////////////////////////////////////////////////////////////////
-// Form open
-///////////////////////////////////////////////////////////////////////////////
-
-
-echo form_open_multipart('configuration_backup/upload');
-echo form_header(lang('configuration_backup_restore_from_archive'));
-
-///////////////////////////////////////////////////////////////////////////////
-// Form fields and buttons
-///////////////////////////////////////////////////////////////////////////////
-
-
-if ($restore_ready)
-    $buttons = array(
-        form_submit_custom('restore', lang('configuration_backup_restore'), 'high'),
-        form_submit_custom('cancel', lang('base_cancel'), 'low')
-    );
-else
-    $buttons = array(
-        form_submit_custom('upload', lang('configuration_backup_upload'), 'high'),
+foreach ($archives as $archive) {
+    $item = array(
+        'title' => "example$i.lan",
+        'action' => anchor_edit('/app/devel', 'high'),
+        'anchors' => anchor_custom('/app/configuration_backup/archives/download/' . $archive, lang('configuration_backup_download'), 'high') .
+            anchor_custom('/app/configuration_backup/archives/restore/' . $archive, lang('configuration_backup_restore'), 'high') .
+            anchor_custom('/app/configuration_backup/archives/delete/' . $archive, lang('configuration_backup_delete'), 'low'),
+        'details' => array($archive),
     );
 
-echo field_file('restore_file', $filename, lang('configuration_backup_restore_file'), $restore_ready);
-
-if ($restore_ready) {
-    echo field_file('size', $size, lang('configuration_backup_size'), $restore_ready);
+    $items[] = $item;
 }
-
-echo button_set($buttons);
-
-///////////////////////////////////////////////////////////////////////////////
-// Form close
-///////////////////////////////////////////////////////////////////////////////
-
-echo form_footer();
-echo form_close();
+echo summary_table(
+    lang('configuration_backup_archives'),
+    array(anchor_custom('/app/configuration_backup/create_archive', lang('configuration_backup_backup_now'), 'high')),
+    array(lang('configuration_backup_filename')),
+    $items
+);

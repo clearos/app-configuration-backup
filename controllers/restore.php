@@ -40,7 +40,7 @@ use \clearos\apps\configuration_backup\Configuration_Backup as Configuration_Bac
 ///////////////////////////////////////////////////////////////////////////////
 
 /**
- * File upload controller.
+ * Configuration restore controller.
  *
  * @category   Apps
  * @package    Configuration Backup
@@ -51,7 +51,7 @@ use \clearos\apps\configuration_backup\Configuration_Backup as Configuration_Bac
  * @link       http://www.clearfoundation.com/docs/developer/apps/configuration_backup/
  */
 
-class Upload extends ClearOS_Controller
+class Restore extends ClearOS_Controller
 {
 
     function __construct()
@@ -78,8 +78,6 @@ class Upload extends ClearOS_Controller
             } catch (Exception $e) {
                 redirect('/configuration_backup');
             }
-        } if ($this->input->post('restore')) {
-            redirect('/configuration_backup/progress');
         }
         $config['upload_path'] = CLEAROS_TEMP_DIR;
         $config['allowed_types'] = 'tgz';
@@ -87,15 +85,15 @@ class Upload extends ClearOS_Controller
 
         $this->load->library('upload', $config);
 
-        if ( ! $this->upload->do_upload('restore_file')) {
+        if (isset($_POST['upload']) && !$this->upload->do_upload('restore_file')) {
             $data['error'] = $this->upload->display_errors();
-        } else {
+        } else if (isset($_POST['upload'])) {
             $upload = $this->upload->data();
             $this->configuration_backup->set_backup_file($upload['file_name']);
             $data['filename'] = $upload['file_name'];
             $data['restore_ready'] = TRUE;
             $data['size'] = byte_format($this->configuration_backup->get_backup_size(), 1);
         }
-        $this->page->view_form('overview', $data, lang('configuration_backup_configuration_backup'));
+        $this->page->view_form('restore', $data, lang('configuration_backup_configuration_backup'));
     }
 }
