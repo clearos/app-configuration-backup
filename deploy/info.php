@@ -25,3 +25,14 @@ $app['subcategory'] = lang('base_subcategory_backup');
 /////////////////////////////////////////////////////////////////////////////
 // Packaging
 /////////////////////////////////////////////////////////////////////////////
+
+$app['core_file_manifest'] = array( 
+   'backup.conf' => array(
+        'target' => '/etc/backup.conf',
+        'mode' => '0644',
+        'owner' => 'webconfig',
+        'group' => 'webconfig',
+        'config' => TRUE,
+        'config_params' => 'noreplace',
+    )
+);

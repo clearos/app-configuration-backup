@@ -65,14 +65,116 @@ class Configuration_Backup extends ClearOS_Controller
         // Load dependencies
         //------------------
 
-        $this->load->helper('number');
         $this->load->library('configuration_backup/Configuration_Backup');
         $this->lang->load('configuration_backup');
 
         // Load views
         //-----------
 
-        $this->page->view_form('overview', $data, lang('configuration_backup_configuration_backup'));
+        $views = array('configuration_backup/restore', 'configuration_backup/archives');
+
+		$this->page->view_forms($views, lang('configuration_backup_configuration_backup'));
+    }
+
+    /**
+     * Download archive file.
+     *
+     * @param string  $filename archive filename
+     *
+     * @return view
+     */
+
+    function download($filename)
+    {
+        header('Content-type: application/tgz');
+        header('Content-Disposition: attachment; filename=' . $filename);
+        header('Pragma: no-cache');
+        header('Expires: 0');
+        $this->load->library('configuration_backup/Configuration_Backup');
+
+        ob_clean();
+        echo $this->configuration_backup->get_contents($filename);
+        ob_flush();
+    }
+
+    /**
+     * Destroys archive file.
+     *
+     * @param string  $filename archive filename
+     *
+     * @return view
+     */
+
+    function destroy($filename)
+    {
+        // Load libraries
+        //---------------
+
+        $this->load->library('configuration_backup/Configuration_Backup');
+
+        // Handle form submit
+        //-------------------
+
+        try {
+            $this->configuration_backup->delete_archive($filename);
+            redirect('/configuration_backup');
+        } catch (Exception $e) {
+            $this->page->view_exception($e);
+            return;
+        }
+    }
+
+    /**
+     * Restore using archive file.
+     *
+     * @param string  $filename archive filename
+     *
+     * @return view
+     */
+
+    function archive_restore($filename)
+    {
+        // Load libraries
+        //---------------
+
+        $this->load->library('configuration_backup/Configuration_Backup');
+
+        // Handle form submit
+        //-------------------
+
+        try {
+            $this->configuration_backup->restore_by_archive($filename);
+            redirect('/configuration_backup');
+        } catch (Exception $e) {
+            $this->page->view_exception($e);
+            return;
+        }
+    }
+
+
+    /**
+     * Take a backup snaphot.
+     *
+     * @return view
+     */
+
+    function create_archive()
+    {
+        // Load libraries
+        //---------------
+
+        $this->load->library('configuration_backup/Configuration_Backup');
+
+        // Handle form submit
+        //-------------------
+
+        try {
+            $this->configuration_backup->backup();
+            redirect('/configuration_backup');
+        } catch (Exception $e) {
+            $this->page->view_exception($e);
+            return;
+        }
     }
 
 }

@@ -171,7 +171,7 @@ class Configuration_Backup
         //--------------------------------------------
 
         try {
-            $folder = new Folder(self::PATH_ARCHIVE);
+            $folder = new Folder(self::FOLDER_BACKUP);
 
             if (!$folder->exists())
                 $folder->create("root", "root", 700);
@@ -202,7 +202,7 @@ class Configuration_Backup
             $shell = new Shell();
             $attr = '--exclude /etc/system/database --exclude /etc/postfix/filters --ignore-failed-read -cpzf ';
 
-            $args = self::PATH_ARCHIVE . '/' . $filename . ' ' . $manifest;
+            $args = self::FOLDER_BACKUP . '/' . $filename . ' ' . $manifest;
             if ($shell->execute(self::CMD_TAR, $attr . $args, TRUE) != 0)
                 throw new Engine_Exception($shell->get_first_output_line());
         } catch (Exception $e) {
@@ -210,13 +210,13 @@ class Configuration_Backup
         }
 
         try {
-            $archive = new File(self::PATH_ARCHIVE . '/' . $filename);
+            $archive = new File(self::FOLDER_BACKUP . '/' . $filename);
             $archive->chmod(600);
         } catch (Exception $e) {
             throw new Engine_Exception(clearos_exception_message($e), CLEAROS_ERROR);
         }
 
-        return self::PATH_ARCHIVE . '/' . $filename;
+        return self::FOLDER_BACKUP . '/' . $filename;
     }
 
     /**
@@ -230,7 +230,7 @@ class Configuration_Backup
     {
         clearos_profile(__METHOD__, __LINE__);
 
-        return $this->_get_list(self::PATH_ARCHIVE);
+        return $this->_get_list(self::FOLDER_BACKUP);
     }
 
     /**
@@ -245,6 +245,42 @@ class Configuration_Backup
         clearos_profile(__METHOD__, __LINE__);
 
         return $this->_get_list(self::PATH_UPLOAD);
+    }
+
+    /**
+     * Deletes an archive file.
+     *
+     * @return void
+     * @throws Engine_Exception
+     */
+
+    function delete_archive($filename)
+    {
+        clearos_profile(__METHOD__, __LINE__);
+
+        try {
+            $file = new File(self::FOLDER_BACKUP . '/' . $filename, TRUE);
+            $file->delete();
+        } catch (Exception $e) {
+            // Not fatal
+        }
+    }
+
+    /**
+     * Gets contents of an archive file.
+     *
+     * @return void
+     * @throws Engine_Exception File_Not_Found_Exception
+     */
+
+    function get_contents($filename)
+    {
+        clearos_profile(__METHOD__, __LINE__);
+
+        $file = new File(self::FOLDER_BACKUP . '/' . $filename, TRUE);
+        if (!$file->exists())
+            throw new File_Not_Found_Exception(CLEAROS_ERROR);
+        return $file->get_contents();
     }
 
     /**
@@ -266,7 +302,7 @@ class Configuration_Backup
         $archives = array();
 
         try {
-            $archives = $this->aet_archive_list();
+            $archives = $this->get_archive_list();
             $uploads = $this->get_upload_list();
         } catch (Exception $e) {
             throw new Engine_Exception(clearos_exception_message($e), CLEAROS_ERROR);
@@ -302,7 +338,7 @@ class Configuration_Backup
 
             try {
 
-                if ($shell->execute(self::CMD_LS, '-sC1 ' . self::PATH_ARCHIVE . '/' . $archive, TRUE) != 0)
+                if ($shell->execute(self::CMD_LS, '-sC1 ' . self::FOLDER_BACKUP . '/' . $archive, TRUE) != 0)
                     throw new Engine_Exception($shell->get_first_output_line());
 
                 unset($list[$stamp]);
@@ -349,7 +385,7 @@ class Configuration_Backup
     {
         clearos_profile(__METHOD__, __LINE__);
 
-        $this->_restore(self::PATH_ARCHIVE, $archive);
+        $this->_restore(self::FOLDER_BACKUP, $archive);
     }
 
     /**
@@ -406,7 +442,7 @@ class Configuration_Backup
             throw new Engine_Exception(clearos_exception_message($e), CLEAROS_ERROR);
         }
 
-        $files = $shell->GetOutput();
+        $files = $shell->get_output();
         $release_found = FALSE;
 
         foreach ($files as $file) {
@@ -456,14 +492,14 @@ class Configuration_Backup
         try {
             $file = new File(CLEAROS_TEMP_DIR . '/' . $filename, TRUE);
             if (!$file->exists())
-                throw new File_Not_Found_Exception(clearos_exception_message($e), CLEAROS_ERROR);
+                throw new File_Not_Found_Exception(CLEAROS_ERROR);
 
             // Move uploaded file to cache
             $file->move_to(self::FOLDER_UPLOAD . '/' . $filename);
             $file->chown('root','root'); 
             $file->chmod(600);
         } catch (File_Not_Found_Exception $e) {
-            throw new File_Not_Found_Exception(clearos_exception_message($e), CLEAROS_ERROR);
+            throw new File_Not_Found_Exception(clearos_exception_message($e) . ' - ' . $filename, CLEAROS_ERROR);
         } catch (Exception $e) {
             throw new Engine_Exception(clearos_exception_message($e), CLEAROS_ERROR);
         }
@@ -485,10 +521,10 @@ class Configuration_Backup
         try {
             $file = new File(self::FOLDER_UPLOAD . '/' . $filename, TRUE);
             if (!$file->exists())
-                throw new File_Not_Found_Exception(lang('configuration_backup_backup_not_uploaded'), CLEAROS_ERROR);
+                throw new File_Not_Found_Exception(CLEAROS_ERROR);
             $file->delete();
         } catch (File_Not_Found_Exception $e) {
-            throw new File_Not_Found_Exception(clearos_exception_message($e), CLEAROS_ERROR);
+            throw new File_Not_Found_Exception(clearos_exception_message($e) . ' - ' . $filename, CLEAROS_ERROR);
         } catch (Exception $e) {
             throw new Engine_Exception(clearos_exception_message($e), CLEAROS_ERROR);
         }
@@ -510,10 +546,10 @@ class Configuration_Backup
         try {
             $file = new File(self::FOLDER_UPLOAD . '/' . $filename, TRUE);
             if (!$file->exists())
-                throw new File_Not_Found_Exception(lang('configuration_backup_backup_not_found'), CLEAROS_ERROR);
+                throw new File_Not_Found_Exception(CLEAROS_ERROR);
             return $file->get_size();
         } catch (File_Not_Found_Exception $e) {
-            throw new File_Not_Found_Exception(clearos_exception_message($e), CLEAROS_ERROR);
+            throw new File_Not_Found_Exception(clearos_exception_message($e) . ' - ' . $filename, CLEAROS_ERROR);
         } catch (Exception $e) {
             throw new Engine_Exception(clearos_exception_message($e), CLEAROS_ERROR);
         }
@@ -545,7 +581,7 @@ class Configuration_Backup
             if (! $folder->Exists())
                 throw new Folder_Not_Found_Exception($path, CLEAROS_ERROR);
 
-            $contents = $folder->GetListing();
+            $contents = $folder->get_listing();
         } catch (Exception $e) {
             throw new Engine_Exception(clearos_exception_message($e), CLEAROS_ERROR);
         }
@@ -554,7 +590,7 @@ class Configuration_Backup
             return $archives;
 
         foreach ($contents as $value) {
-            if (! preg_match("/tar.gz$/", $value))
+            if (! preg_match("/tgz$/", $value))
                 continue;
 
             $archives[] = $value;
@@ -581,7 +617,7 @@ class Configuration_Backup
 
         try {
             if (! $config->exists())
-                throw new File_Not_Found_Exception(self::FILE_CONFIG, CLEAROS_ERROR);
+                throw new File_Not_Found_Exception(CLEAROS_ERROR);
 
             $contents = $config->get_contents_as_array();
 
@@ -616,13 +652,13 @@ class Configuration_Backup
 
         $fullpath = $path . '/' . $archive;
 
-        $this->VerifyArchive($fullpath);
+        $this->verify_archive($fullpath);
 
         $file = new File($fullpath);
 
         try {
             if (! $file->Exists())
-                throw new File_Not_Found_Exception($fullpath, CLEAROS_ERROR);
+                throw new File_Not_Found_Exception(CLEAROS_ERROR);
         } catch (Exception $e) {
             throw new Engine_Exception(clearos_exception_message($e), CLEAROS_ERROR);
         }

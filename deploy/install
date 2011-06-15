@@ -1,0 +1,6 @@
+#!/bin/sh
+
+# Add sudoers entries
+#--------------------
+
+/usr/sbin/addsudo /bin/tar app-configuration-backup
