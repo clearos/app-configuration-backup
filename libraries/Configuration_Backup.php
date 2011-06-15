@@ -56,6 +56,7 @@ clearos_load_language('configuration_backup');
 //--------
 
 // FIXME use \clearos\apps\\ClearDirectory as ClearDirectory;
+use \clearos\apps\base\Engine as Engine;
 use \clearos\apps\base\File as File;
 use \clearos\apps\base\Folder as Folder;
 use \clearos\apps\base\Shell as Shell;
@@ -63,6 +64,7 @@ use \clearos\apps\network\Hostname as Hostname;
 use \clearos\apps\openldap_directory\User_Manager_Driver as User_Manager_Driver;
 
 // FIXME clearos_load_library('/ClearDirectory');
+clearos_load_library('base/Engine');
 clearos_load_library('base/File');
 clearos_load_library('base/Folder');
 clearos_load_library('base/Shell');
@@ -96,7 +98,7 @@ clearos_load_library('base/Folder_Not_Found_Exception');
  * @link       http://www.clearfoundation.com/docs/developer/apps/configuration_backup/
  */
 
-class Configuration_Backup
+class Configuration_Backup extends Engine
 {
     ///////////////////////////////////////////////////////////////////////////////
     // C O N S T A N T S
@@ -115,7 +117,7 @@ class Configuration_Backup
     ///////////////////////////////////////////////////////////////////////////////
 
     /**
-     * Account Import/Export constructor.
+     * Configuration backup/restore constructor.
      */
 
     function __construct()
@@ -244,7 +246,7 @@ class Configuration_Backup
     {
         clearos_profile(__METHOD__, __LINE__);
 
-        return $this->_get_list(self::PATH_UPLOAD);
+        return $this->_get_list(self::FOLDER_UPLOAD);
     }
 
     /**
@@ -313,7 +315,7 @@ class Configuration_Backup
 
         foreach ($uploads as $archive) {
             try {
-                $file = new File(self::PATH_UPLOAD . "/" . $archive);
+                $file = new File(self::FOLDER_UPLOAD . "/" . $archive);
                 $file->delete();
             } catch (Exception $e) {
                 // Nnt fatal
@@ -401,7 +403,7 @@ class Configuration_Backup
     {
         clearos_profile(__METHOD__, __LINE__);
 
-        $this->_restore(self::PATH_UPLOAD, $archive);
+        $this->_restore(self::FOLDER_UPLOAD, $archive);
         $this->purge();
     }
 
