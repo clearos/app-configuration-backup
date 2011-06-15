@@ -42,7 +42,7 @@ foreach ($archives as $archive) {
     $item = array(
         'title' => "example$i.lan",
         'action' => anchor_edit('/app/devel', 'high'),
-        'anchors' => anchor_custom('/app/configuration_backup/archives/download/' . $archive, lang('configuration_backup_download'), 'high') .
+        'anchors' => anchor_custom('/app/configuration_backup/download/' . $archive, lang('configuration_backup_download'), 'high') .
             anchor_custom('/app/configuration_backup/archives/restore/' . $archive, lang('configuration_backup_restore'), 'high') .
             anchor_custom('/app/configuration_backup/archives/delete/' . $archive, lang('configuration_backup_delete'), 'low'),
         'details' => array($archive),
