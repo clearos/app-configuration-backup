@@ -86,7 +86,7 @@ class Restore extends ClearOS_Controller
         $this->load->library('upload', $config);
 
         if (isset($_POST['upload']) && !$this->upload->do_upload('restore_file')) {
-            $data['error'] = $this->upload->display_errors();
+            $this->page->set_message($this->upload->display_errors());
         } else if (isset($_POST['upload'])) {
             $upload = $this->upload->data();
             $this->configuration_backup->set_backup_file($upload['file_name']);
