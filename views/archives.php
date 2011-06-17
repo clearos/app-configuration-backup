@@ -39,13 +39,16 @@ $this->lang->load('configuration_backup');
 $items = array();
 
 foreach ($archives as $archive) {
+    $buttons = array(
+        anchor_custom('/app/configuration_backup/download/' . $archive, lang('configuration_backup_download'), 'high'),
+        anchor_custom('/app/configuration_backup/archives/restore/' . $archive, lang('configuration_backup_restore'), 'high'),
+        anchor_custom('/app/configuration_backup/archives/delete/' . $archive, lang('configuration_backup_delete'), 'low')
+    );
     $item = array(
         'title' => "example$i.lan",
         'action' => anchor_edit('/app/devel', 'high'),
         'action' => '/app/dns/edit/' . $ip,
-        'anchors' => anchor_custom('/app/configuration_backup/download/' . $archive, lang('configuration_backup_download'), 'high') .
-            anchor_custom('/app/configuration_backup/archives/restore/' . $archive, lang('configuration_backup_restore'), 'high') .
-            anchor_custom('/app/configuration_backup/archives/delete/' . $archive, lang('configuration_backup_delete'), 'low'),
+	    'anchors' => button_set($buttons),
         'details' => array($archive),
     );
 
