@@ -117,6 +117,7 @@ class Configuration_Backup extends ClearOS_Controller
 
         try {
             $this->configuration_backup->delete_archive($filename);
+            $this->page->set_message(lang('configuration_backup_archive_deleted'), 'info');
             redirect('/configuration_backup');
         } catch (Exception $e) {
             $this->page->view_exception($e);
@@ -170,6 +171,7 @@ class Configuration_Backup extends ClearOS_Controller
 
         try {
             $this->configuration_backup->backup();
+            $this->page->set_message(lang('configuration_backup_archive_created'), 'info');
             redirect('/configuration_backup');
         } catch (Exception $e) {
             $this->page->view_exception($e);

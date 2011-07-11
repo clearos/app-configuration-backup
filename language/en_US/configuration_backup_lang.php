@@ -18,3 +18,5 @@ $lang['configuration_backup_release_mismatch'] = 'The version information in the
 $lang['configuration_backup_release_missing'] = 'The version information is not available in the backup file.';
 $lang['configuration_backup_restore_complete'] = 'Restore is complete.';
 $lang['configuration_backup_restore_running'] = 'Restore running.  It can take up to a minute to complete, so please be patient.';
+$lang['configuration_backup_archive_created'] = 'Archive created.';
+$lang['configuration_backup_archive_deleted'] = 'Archive deleted.';

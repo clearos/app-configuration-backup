@@ -36,3 +36,7 @@ $app['core_file_manifest'] = array(
         'config_params' => 'noreplace',
     )
 );
+$app['core_directory_manifest'] = array(
+   '/var/clearos/configuration_backup' => array('mode' => '755', 'owner' => 'webconfig', 'group' => 'webconfig'),
+   '/var/clearos/configuration_backup/upload' => array('mode' => '755', 'owner' => 'webconfig', 'group' => 'webconfig')
+);

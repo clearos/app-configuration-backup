@@ -167,7 +167,7 @@ class Configuration_Backup extends Engine
             $prefix = "";
         }
 
-        $filename = "backup-" . $prefix . strftime("%m-%d-%Y-%H-%M-%S", time()) . ".tar.gz";
+        $filename = "backup-" . $prefix . strftime("%m-%d-%Y-%H-%M-%S", time()) . ".tgz";
 
         // Create the temporary folder for the archive
         //--------------------------------------------
@@ -331,7 +331,7 @@ class Configuration_Backup extends Engine
         foreach ($archives as $archive) {
             $date_regex = '([0-9]{2})-([0-9]{2})-([0-9]{4})-([0-9]{2})-([0-9]{2})-([0-9]{2})';
 
-            if (!preg_match("/^backup-(.*)-$date_regex.tar.gz$/", $archive, $parts))
+            if (!preg_match("/^backup-(.*)-$date_regex.tgz$/", $archive, $parts))
                 continue;
 
             $stamp = mktime($parts[5], $parts[6], $parts[7], $parts[2], $parts[3], $parts[4]);
