@@ -65,7 +65,7 @@ if ($restore_ready) {
     echo field_file('size', $size, lang('configuration_backup_size'), $restore_ready);
 }
 
-echo button_set($buttons);
+echo field_button_set($buttons);
 
 ///////////////////////////////////////////////////////////////////////////////
 // Form close
