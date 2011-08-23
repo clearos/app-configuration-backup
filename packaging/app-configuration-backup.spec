@@ -1,8 +1,8 @@
 
 Name: app-configuration-backup
 Group: ClearOS/Apps
-Version: 5.9.9.0
-Release: 1%{dist}
+Version: 5.9.9.4
+Release: 1.1%{dist}
 Summary: Configuration Backup/Restore
 License: GPLv3
 Packager: ClearFoundation

@@ -5,8 +5,8 @@
 /////////////////////////////////////////////////////////////////////////////
 
 $app['basename'] = 'configuration_backup';
-$app['version'] = '5.9.9.0';
-$app['release'] = '1';
+$app['version'] = '5.9.9.4';
+$app['release'] = '1.1';
 $app['vendor'] = 'ClearFoundation';
 $app['packager'] = 'ClearFoundation';
 $app['license'] = 'GPLv3';
