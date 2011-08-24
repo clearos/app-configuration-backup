@@ -11,14 +11,13 @@ $app['vendor'] = 'ClearFoundation';
 $app['packager'] = 'ClearFoundation';
 $app['license'] = 'GPLv3';
 $app['license_core'] = 'LGPLv3';
-$app['summary'] = lang('configuration_backup_policies_app_summary');
-$app['description'] = lang('configuration_backup_app_long_description');
+$app['description'] = lang('configuration_backup_app_description');
 
 /////////////////////////////////////////////////////////////////////////////
 // App name and categories
 /////////////////////////////////////////////////////////////////////////////
 
-$app['name'] = 'Configuration Backup/Restore';
+$app['name'] = lang('configuration_backup_app_name');
 $app['category'] = lang('base_category_system');
 $app['subcategory'] = lang('base_subcategory_backup');
 
@@ -26,16 +25,6 @@ $app['subcategory'] = lang('base_subcategory_backup');
 // Packaging
 /////////////////////////////////////////////////////////////////////////////
 
-$app['core_file_manifest'] = array( 
-   'backup.conf' => array(
-        'target' => '/etc/backup.conf',
-        'mode' => '0644',
-        'owner' => 'webconfig',
-        'group' => 'webconfig',
-        'config' => TRUE,
-        'config_params' => 'noreplace',
-    )
-);
 $app['core_directory_manifest'] = array(
    '/var/clearos/configuration_backup' => array('mode' => '755', 'owner' => 'webconfig', 'group' => 'webconfig'),
    '/var/clearos/configuration_backup/upload' => array('mode' => '755', 'owner' => 'webconfig', 'group' => 'webconfig')

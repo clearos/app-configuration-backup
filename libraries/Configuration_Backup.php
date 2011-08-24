@@ -104,13 +104,19 @@ class Configuration_Backup extends Engine
     // C O N S T A N T S
     ///////////////////////////////////////////////////////////////////////////////
 
-    const FILE_CONFIG = '/etc/backup.conf';
+    const FILE_CONFIG = 'backup.conf';
     const FOLDER_BACKUP = '/var/clearos/configuration_backup';
     const FOLDER_UPLOAD = '/var/clearos/configuration_backup/upload';
     const CMD_TAR = '/bin/tar';
     const CMD_LS = '/bin/ls';
     const FILE_LIMIT = 10; // Maximum number of archives to keep
     const SIZE_LIMIT = 51200; // Maximum size of all archives
+
+    ///////////////////////////////////////////////////////////////////////////////
+    // V A R I A B L E S
+    ///////////////////////////////////////////////////////////////////////////////
+
+    protected $file_config = NULL;
 
     ///////////////////////////////////////////////////////////////////////////////
     // M E T H O D S
@@ -123,6 +129,8 @@ class Configuration_Backup extends Engine
     function __construct()
     {
         clearos_profile(__METHOD__, __LINE__);
+
+        $this->file_config = clearos_app_base('configuration_backup') . '/deploy/' . self::FILE_CONFIG;
     }
 
     /**
@@ -414,7 +422,7 @@ class Configuration_Backup extends Engine
         $release_found = FALSE;
 
         foreach ($files as $file) {
-            if (preg_match("/ etc\/release$/", $file))
+            if (preg_match("/ etc\/clearos-release$/", $file))
                 $release_found = TRUE;
         }
 
@@ -424,11 +432,11 @@ class Configuration_Backup extends Engine
         // Check to see if release file matches
         //-------------------------------------
 
-        $retval = $shell->execute(self::CMD_TAR, "-O -C /var/tmp -xzf $fullpath etc/release", TRUE);
+        $retval = $shell->execute(self::CMD_TAR, "-O -C /var/tmp -xzf $fullpath etc/clearos-release", TRUE);
 
         $archive_version = trim($shell->get_first_output_line());
 
-        $file = new File("/etc/release");
+        $file = new File("/etc/clearos-release");
         $current_version = trim($file->get_contents());
 
         if ($current_version != $archive_version) {
@@ -546,7 +554,7 @@ class Configuration_Backup extends Engine
 
         $files = array();
 
-        $config = new File(self::FILE_CONFIG);
+        $config = new File($this->file_config);
 
         $contents = $config->get_contents_as_array();
 

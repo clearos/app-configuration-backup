@@ -36,7 +36,6 @@ cp -r * %{buildroot}/usr/clearos/apps/configuration_backup/
 
 install -d -m 755 %{buildroot}/var/clearos/configuration_backup
 install -d -m 755 %{buildroot}/var/clearos/configuration_backup/upload
-install -D -m 0644 packaging/backup.conf %{buildroot}/etc/backup.conf
 
 %post
 logger -p local6.notice -t installer 'app-configuration-backup - installing'
@@ -81,4 +80,3 @@ exit 0
 /usr/clearos/apps/configuration_backup/deploy
 /usr/clearos/apps/configuration_backup/language
 /usr/clearos/apps/configuration_backup/libraries
-%attr(0644,webconfig,webconfig) %config(noreplace) /etc/backup.conf
