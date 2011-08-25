@@ -3,7 +3,7 @@ Name: app-configuration-backup
 Group: ClearOS/Apps
 Version: 5.9.9.5
 Release: 1%{dist}
-Summary: Configuration Backup/Restore
+Summary: Configuration Backup
 License: GPLv3
 Packager: ClearFoundation
 Vendor: ClearFoundation
@@ -13,16 +13,16 @@ Requires: %{name}-core = %{version}-%{release}
 Requires: app-base
 
 %description
-Translation missing (configuration_backup_app_long_description)
+Configuration Backup description...
 
 %package core
-Summary: Configuration Backup/Restore - APIs and install
+Summary: Configuration Backup - APIs and install
 Group: ClearOS/Libraries
 License: LGPLv3
 Requires: app-base-core
 
 %description core
-Translation missing (configuration_backup_app_long_description)
+Configuration Backup description...
 
 This package provides the core API and libraries.
 
