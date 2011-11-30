@@ -37,39 +37,33 @@ $this->lang->load('base');
 $this->lang->load('configuration_backup');
 
 ///////////////////////////////////////////////////////////////////////////////
-// Form open
+// Form handler
 ///////////////////////////////////////////////////////////////////////////////
 
+if ($restore_ready) {
+    $buttons = array(
+        form_submit_custom('restore', lang('configuration_backup_restore'), 'high'),
+        anchor_cancel('/app/configuration_backup')
+    );
+} else {
+    $buttons = array(
+        form_submit_custom('upload', lang('configuration_backup_upload'), 'high')
+    );
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Form
+///////////////////////////////////////////////////////////////////////////////
 
 echo form_open_multipart('configuration_backup/restore');
 echo form_header(lang('configuration_backup_restore_from_archive'));
 
-///////////////////////////////////////////////////////////////////////////////
-// Form fields and buttons
-///////////////////////////////////////////////////////////////////////////////
-
-
-if ($restore_ready)
-    $buttons = array(
-        form_submit_custom('restore', lang('configuration_backup_restore'), 'high'),
-        form_submit_custom('cancel', lang('base_cancel'), 'low')
-    );
-else
-    $buttons = array(
-        form_submit_custom('upload', lang('configuration_backup_upload'), 'high')
-    );
-
 echo field_file('restore_file', $filename, lang('configuration_backup_restore_file'), $restore_ready);
 
-if ($restore_ready) {
+if ($restore_ready)
     echo field_file('size', $size, lang('configuration_backup_size'), $restore_ready);
-}
 
 echo field_button_set($buttons);
-
-///////////////////////////////////////////////////////////////////////////////
-// Form close
-///////////////////////////////////////////////////////////////////////////////
 
 echo form_footer();
 echo form_close();

@@ -4,7 +4,7 @@
  * Configuration backup archives controller.
  *
  * @category   Apps
- * @package    Configuration Backup
+ * @package    Configuration_Backup
  * @subpackage Controllers
  * @author     ClearFoundation <developer@clearfoundation.com>
  * @copyright  2011 ClearFoundation
@@ -43,7 +43,7 @@ use \clearos\apps\configuration_backup\Configuration_Backup as Configuration_Bac
  * Configuration restore controller.
  *
  * @category   Apps
- * @package    Configuration Backup
+ * @package    Configuration_Backup
  * @subpackage Controllers
  * @author     ClearFoundation <developer@clearfoundation.com>
  * @copyright  2011 ClearFoundation
@@ -53,22 +53,24 @@ use \clearos\apps\configuration_backup\Configuration_Backup as Configuration_Bac
 
 class Archives extends ClearOS_Controller
 {
+    /**
+     * Default archive controller.
+     *
+     * @return view
+     */
 
-    function __construct()
-    {
-        parent::__construct();
-    }
-
-    function index($message = NULL)
+    function index()
     {
         // Load dependencies
         //------------------
 
-        $this->load->helper('number');
-        $this->load->library('configuration_backup/Configuration_Backup');
         $this->lang->load('configuration_backup');
+        $this->load->library('configuration_backup/Configuration_Backup');
 
         $data['archives'] = $this->configuration_backup->get_archive_list();
+
+        // Load views
+        //-----------
 
         $this->page->view_form('archives', $data, lang('configuration_backup_configuration_backup'));
     }
@@ -76,7 +78,7 @@ class Archives extends ClearOS_Controller
     /**
      * Delete archive file.
      *
-     * @param string  $filename filename
+     * @param string $filename filename
      *
      * @return view
      */
@@ -93,7 +95,7 @@ class Archives extends ClearOS_Controller
     /**
      * Restore from archive file.
      *
-     * @param string  $filename filename
+     * @param string $filename filename
      *
      * @return view
      */
@@ -105,6 +107,7 @@ class Archives extends ClearOS_Controller
         $cancel_uri = '/app/configuration_backup';
         $items = array($filename);
 
-        $this->page->view_confirm(lang('configuration_backup_confirm_restore') . ' ' . $filename . '.', $confirm_uri, $cancel_uri, $items);
+        // TODO: some inconsistencies with the confirm dialogs here
+        $this->page->view_confirm(lang('configuration_backup_confirm_restore') . '<br>' . $filename, $confirm_uri, $cancel_uri, $items);
     }
 }

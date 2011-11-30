@@ -20,6 +20,7 @@ Summary: Configuration Backup - APIs and install
 Group: ClearOS/Libraries
 License: LGPLv3
 Requires: app-base-core
+Requires: app-network-core
 
 %description core
 Configuration Backup description...
@@ -34,8 +35,8 @@ This package provides the core API and libraries.
 mkdir -p -m 755 %{buildroot}/usr/clearos/apps/configuration_backup
 cp -r * %{buildroot}/usr/clearos/apps/configuration_backup/
 
-install -d -m 755 %{buildroot}/var/clearos/configuration_backup
-install -d -m 755 %{buildroot}/var/clearos/configuration_backup/upload
+install -d -m 0755 %{buildroot}/var/clearos/configuration_backup
+install -d -m 775 %{buildroot}/var/clearos/configuration_backup/upload
 
 %post
 logger -p local6.notice -t installer 'app-configuration-backup - installing'
@@ -75,8 +76,8 @@ exit 0
 %exclude /usr/clearos/apps/configuration_backup/packaging
 %exclude /usr/clearos/apps/configuration_backup/tests
 %dir /usr/clearos/apps/configuration_backup
-%dir %attr(755,webconfig,webconfig) /var/clearos/configuration_backup
-%dir %attr(755,webconfig,webconfig) /var/clearos/configuration_backup/upload
+%dir /var/clearos/configuration_backup
+%dir %attr(775,root,webconfig) /var/clearos/configuration_backup/upload
 /usr/clearos/apps/configuration_backup/deploy
 /usr/clearos/apps/configuration_backup/language
 /usr/clearos/apps/configuration_backup/libraries

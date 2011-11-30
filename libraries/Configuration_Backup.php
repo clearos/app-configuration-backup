@@ -55,32 +55,28 @@ clearos_load_language('configuration_backup');
 // Classes
 //--------
 
-// FIXME use \clearos\apps\\ClearDirectory as ClearDirectory;
 use \clearos\apps\base\Engine as Engine;
 use \clearos\apps\base\File as File;
 use \clearos\apps\base\Folder as Folder;
 use \clearos\apps\base\Shell as Shell;
 use \clearos\apps\network\Hostname as Hostname;
-use \clearos\apps\openldap_directory\User_Manager_Driver as User_Manager_Driver;
+use \clearos\apps\openldap\LDAP_Driver as LDAP_Driver;
 
-// FIXME clearos_load_library('/ClearDirectory');
 clearos_load_library('base/Engine');
 clearos_load_library('base/File');
 clearos_load_library('base/Folder');
 clearos_load_library('base/Shell');
 clearos_load_library('network/Hostname');
-clearos_load_library('openldap_directory/User_Manager_Driver');
 
 // Exceptions
 //-----------
 
+use \Exception as Exception;
 use \clearos\apps\base\Engine_Exception as Engine_Exception;
 use \clearos\apps\base\File_Not_Found_Exception as File_Not_Found_Exception;
-use \clearos\apps\base\Folder_Not_Found_Exception as Folder_Not_Found_Exception;
 
 clearos_load_library('base/Engine_Exception');
 clearos_load_library('base/File_Not_Found_Exception');
-clearos_load_library('base/Folder_Not_Found_Exception');
 
 ///////////////////////////////////////////////////////////////////////////////
 // C L A S S
@@ -184,12 +180,11 @@ class Configuration_Backup extends Engine
         // Dump the current LDAP database
         //-------------------------------
 
-        // FIXME
-        if (file_exists(COMMON_CORE_DIR . "/api/ClearDirectory.class.php")) {
-            include_once COMMON_CORE_DIR . "/api/ClearDirectory.class.php";
+        if (clearos_library_installed('openldap/LDAP_Driver')) {
+            clearos_load_library('openldap/LDAP_Driver');
 
-            $directory = new ClearDirectory();
-            $directory->export();
+            $openldap = new LDAP_Driver();
+            $openldap->export();
         }
 
         // Create the backup
@@ -599,31 +594,11 @@ class Configuration_Backup extends Engine
         // Reload the LDAP database and reset LDAP-related daemons
         //--------------------------------------------------------
 
-        // FIXME
-        if (file_exists(COMMON_CORE_DIR . "/api/ClearDirectory.class.php")) {
-            include_once COMMON_CORE_DIR . "/api/ClearDirectory.class.php";
+        if (clearos_library_installed('openldap/LDAP_Driver')) {
+            clearos_load_library('openldap/LDAP_Driver');
 
-            try {
-                $directory = new ClearDirectory();
-                $directory->Import(FALSE);
-            } catch (Exception $e) {
-                throw new Engine_Exception(clearos_exception_message($e), CLEAROS_ERROR);
-            }
-
-            if (file_exists(COMMON_CORE_DIR . "/api/User_Manager_Driver.class.php")) {
-                include_once COMMON_CORE_DIR . "/api/User_Manager_Driver.class.php";
-
-                try {
-                    $user_manager = new User_Manager_Driver();
-                    $user_manager->synchronize();
-                } catch (Exception $e) {
-                    throw new Engine_Exception(clearos_exception_message($e), CLEAROS_ERROR);
-                }
-            }
+            $openldap = new LDAP_Driver();
+            $openldap->import();
         }
     }
-
-    ///////////////////////////////////////////////////////////////////////////////
-    // V A L I D A T I O N   R O U T I N E S
-    ///////////////////////////////////////////////////////////////////////////////
 }

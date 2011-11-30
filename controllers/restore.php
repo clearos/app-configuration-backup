@@ -53,12 +53,6 @@ use \clearos\apps\configuration_backup\Configuration_Backup as Configuration_Bac
 
 class Restore extends ClearOS_Controller
 {
-
-    function __construct()
-    {
-        parent::__construct();
-    }
-
     function index()
     {
         // Load dependencies
@@ -73,27 +67,41 @@ class Restore extends ClearOS_Controller
 
         if ($this->input->post('cancel')) {
             try {
-                $this->configuration_backup->delete_backup_file(CLEAROS_TEMP_DIR . '/' . $_POST['filename']);
+                $this->configuration_backup->delete_backup_file(CLEAROS_TEMP_DIR . '/' . $this->input->post['restore_file']);
                 redirect('/configuration_backup');
             } catch (Exception $e) {
                 redirect('/configuration_backup');
             }
         }
+
         $config['upload_path'] = CLEAROS_TEMP_DIR;
         $config['allowed_types'] = 'tgz';
         $config['overwrite'] = TRUE;
 
         $this->load->library('upload', $config);
 
+        $data['filename'] = '';
+        $data['restore_ready'] = FALSE;
+        $data['size'] = 0;
+
+// FIXME: restore is broken
         if (isset($_POST['upload']) && !$this->upload->do_upload('restore_file')) {
             $this->page->set_message($this->upload->display_errors());
+
         } else if (isset($_POST['upload'])) {
             $upload = $this->upload->data();
             $this->configuration_backup->set_backup_file($upload['file_name']);
+
             $data['filename'] = $upload['file_name'];
             $data['restore_ready'] = TRUE;
-            $data['size'] = byte_format($this->configuration_backup->get_backup_size(), 1);
+            // FIXME: discuss a consisten format with team 
+            $data['size'] = byte_format($this->configuration_backup->get_backup_size($upload['file_name']), 1);
+
         }
+
+        // Load views
+        //-----------
+
         $this->page->view_form('restore', $data, lang('configuration_backup_configuration_backup'));
     }
 }

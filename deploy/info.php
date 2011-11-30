@@ -22,10 +22,20 @@ $app['category'] = lang('base_category_system');
 $app['subcategory'] = lang('base_subcategory_backup');
 
 /////////////////////////////////////////////////////////////////////////////
+// Controllers
+/////////////////////////////////////////////////////////////////////////////
+
+$app['controllers']['configuration_backup']['title'] = $app['name'];
+
+/////////////////////////////////////////////////////////////////////////////
 // Packaging
 /////////////////////////////////////////////////////////////////////////////
 
+$app['core_requires'] = array(
+    'app-network-core'
+);
+
 $app['core_directory_manifest'] = array(
-   '/var/clearos/configuration_backup' => array('mode' => '755', 'owner' => 'webconfig', 'group' => 'webconfig'),
-   '/var/clearos/configuration_backup/upload' => array('mode' => '755', 'owner' => 'webconfig', 'group' => 'webconfig')
+   '/var/clearos/configuration_backup' => array(),
+   '/var/clearos/configuration_backup/upload' => array('mode' => '775', 'owner' => 'root', 'group' => 'webconfig')
 );

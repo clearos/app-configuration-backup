@@ -36,6 +36,10 @@
 $this->lang->load('base');
 $this->lang->load('configuration_backup');
 
+///////////////////////////////////////////////////////////////////////////////
+// Summary table
+///////////////////////////////////////////////////////////////////////////////
+
 $items = array();
 
 foreach ($archives as $archive) {
@@ -45,9 +49,8 @@ foreach ($archives as $archive) {
         anchor_custom('/app/configuration_backup/archives/delete/' . $archive, lang('configuration_backup_delete'), 'low')
     );
     $item = array(
-        'title' => "example$i.lan",
-        'action' => anchor_edit('/app/devel', 'high'),
-        'action' => '/app/dns/edit/' . $ip,
+        'title' => $archive,
+        'action' => '', // TODO: mobile mode
 	    'anchors' => button_set($buttons),
         'details' => array($archive),
     );
