@@ -1,7 +1,7 @@
 <?php
 
 $lang['configuration_backup_app_name'] = 'Configuration Backup';
-$lang['configuration_backup_app_description'] = 'Configuration Backup description...';
+$lang['configuration_backup_app_description'] = 'The configuration backup and restore app allows an administrator to take a snapshot (archive file) of all configuration settings of the system, allowing easy restoration in the event data is lost.';
 $lang['configuration_backup_configuration_backup'] = 'Configuration Backup/Restore';
 $lang['configuration_backup_upload_error'] = 'Upload Error';
 $lang['configuration_backup_restore_file'] = 'Archive File';
