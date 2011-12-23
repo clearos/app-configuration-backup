@@ -13,7 +13,7 @@ Requires: %{name}-core = %{version}-%{release}
 Requires: app-base
 
 %description
-Configuration Backup description...
+The configuration backup and restore app allows an administrator to take a snapshot (archive file) of all configuration settings of the system, allowing easy restoration in the event data is lost.
 
 %package core
 Summary: Configuration Backup - APIs and install
@@ -23,7 +23,7 @@ Requires: app-base-core
 Requires: app-network-core
 
 %description core
-Configuration Backup description...
+The configuration backup and restore app allows an administrator to take a snapshot (archive file) of all configuration settings of the system, allowing easy restoration in the event data is lost.
 
 This package provides the core API and libraries.
 
