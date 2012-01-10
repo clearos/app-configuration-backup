@@ -84,19 +84,16 @@ class Restore extends ClearOS_Controller
         $data['restore_ready'] = FALSE;
         $data['size'] = 0;
 
-// FIXME: restore is broken
         if (isset($_POST['upload']) && !$this->upload->do_upload('restore_file')) {
             $this->page->set_message($this->upload->display_errors());
-
         } else if (isset($_POST['upload'])) {
             $upload = $this->upload->data();
             $this->configuration_backup->set_backup_file($upload['file_name']);
 
             $data['filename'] = $upload['file_name'];
             $data['restore_ready'] = TRUE;
-            // FIXME: discuss a consisten format with team 
+            // TODO: discuss a consisten format with team 
             $data['size'] = byte_format($this->configuration_backup->get_backup_size($upload['file_name']), 1);
-
         }
 
         // Load views
