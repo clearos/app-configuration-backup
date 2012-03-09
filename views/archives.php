@@ -44,9 +44,9 @@ $items = array();
 
 foreach ($archives as $archive) {
     $buttons = array(
-        anchor_custom('/app/configuration_backup/download/' . $archive, lang('configuration_backup_download'), 'high'),
-        anchor_custom('/app/configuration_backup/archives/restore/' . $archive, lang('configuration_backup_restore'), 'high'),
-        anchor_custom('/app/configuration_backup/archives/delete/' . $archive, lang('configuration_backup_delete'), 'low')
+        anchor_custom('/app/configuration_backup/download/' . $archive, lang('base_download'), 'high'),
+        anchor_custom('/app/configuration_backup/archives/restore/' . $archive, lang('base_restore'), 'high'),
+        anchor_custom('/app/configuration_backup/archives/delete/' . $archive, lang('base_delete'), 'low')
     );
     $item = array(
         'title' => $archive,
@@ -60,6 +60,6 @@ foreach ($archives as $archive) {
 echo summary_table(
     lang('configuration_backup_archives'),
     array(anchor_custom('/app/configuration_backup/create_archive', lang('configuration_backup_backup_now'), 'high')),
-    array(lang('configuration_backup_filename')),
+    array(lang('base_filename')),
     $items
 );
