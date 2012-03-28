@@ -86,15 +86,21 @@ class Configuration_Backup extends ClearOS_Controller
 
     function download($filename)
     {
+        $this->load->library('configuration_backup/Configuration_Backup');
+
+        $sanity_check = $this->configuration_backup->validate_filename($filename);
+
+        if (! empty($sanity_check)) {
+            $this->page->view_exception(new \Exception($sanity_check));
+            return;
+        }
+
         header('Content-type: application/tgz');
         header('Content-Disposition: attachment; filename=' . $filename);
         header('Pragma: no-cache');
         header('Expires: 0');
-        $this->load->library('configuration_backup/Configuration_Backup');
 
-        ob_clean();
-        echo $this->configuration_backup->get_contents($filename);
-        ob_flush();
+        readfile($this->configuration_backup->prepare_download($filename));
     }
 
     /**

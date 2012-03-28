@@ -67,6 +67,7 @@ clearos_load_library('base/File');
 clearos_load_library('base/Folder');
 clearos_load_library('base/Shell');
 clearos_load_library('network/Hostname');
+clearos_load_library('openldap/LDAP_Driver');
 
 // Exceptions
 //-----------
@@ -74,9 +75,11 @@ clearos_load_library('network/Hostname');
 use \Exception as Exception;
 use \clearos\apps\base\Engine_Exception as Engine_Exception;
 use \clearos\apps\base\File_Not_Found_Exception as File_Not_Found_Exception;
+use \clearos\apps\base\Validation_Exception as Validation_Exception;
 
 clearos_load_library('base/Engine_Exception');
 clearos_load_library('base/File_Not_Found_Exception');
+clearos_load_library('base/Validation_Exception');
 
 ///////////////////////////////////////////////////////////////////////////////
 // C L A S S
@@ -245,6 +248,8 @@ class Configuration_Backup extends Engine
     {
         clearos_profile(__METHOD__, __LINE__);
 
+        Validation_Exception::is_valid($this->validate_filename($filename));
+
         try {
             $file = new File(self::FOLDER_BACKUP . '/' . $filename, TRUE);
             $file->delete();
@@ -254,7 +259,7 @@ class Configuration_Backup extends Engine
     }
 
     /**
-     * Gets contents of an archive file.
+     * Returns full path name.
      *
      * @param string $filename filename
      *
@@ -262,13 +267,18 @@ class Configuration_Backup extends Engine
      * @throws Engine_Exception File_Not_Found_Exception
      */
 
-    function get_contents($filename)
+    function prepare_download($filename)
     {
         clearos_profile(__METHOD__, __LINE__);
 
-        $file = new File(self::FOLDER_BACKUP . '/' . $filename, TRUE);
+        Validation_Exception::is_valid($this->validate_filename($filename));
 
-        return $file->get_contents();
+        $file = new File(self::FOLDER_BACKUP . '/' . $filename);
+
+        $file->chown('root', 'webconfig');
+        $file->chmod('0660');
+
+        return self::FOLDER_BACKUP . '/' . $filename;
     }
 
     /**
@@ -365,6 +375,8 @@ class Configuration_Backup extends Engine
     {
         clearos_profile(__METHOD__, __LINE__);
 
+        Validation_Exception::is_valid($this->validate_filename($archive));
+
         $this->_restore(self::FOLDER_BACKUP, $archive);
     }
 
@@ -381,85 +393,10 @@ class Configuration_Backup extends Engine
     {
         clearos_profile(__METHOD__, __LINE__);
 
+        Validation_Exception::is_valid($this->validate_filename($archive));
+
         $this->_restore(self::FOLDER_UPLOAD, $archive);
         $this->purge();
-    }
-
-    /**
-     * Verifies version information.
-     *
-     * @param string $fullpath filename of the archive
-     *
-     * @return void
-     * @throws Engine_Exception, Validation_Exception
-     */
-
-    function verify_archive($fullpath)
-    {
-        clearos_profile(__METHOD__, __LINE__);
-
-        // Validate
-        //---------
-
-        $file = new File($fullpath);
-
-        if (! $file->exists())
-            throw new File_Not_Found_Exception($fullpath);
-
-        // Check for /etc/release file (not stored in old versions)
-        //---------------------------------------------------------
-
-        $shell = new Shell();
-
-        $shell->execute(self::CMD_TAR, "-tzvf $fullpath", TRUE);
-        $files = $shell->get_output();
-
-        $release_found = FALSE;
-
-        foreach ($files as $file) {
-            if (preg_match("/ etc\/clearos-release$/", $file))
-                $release_found = TRUE;
-        }
-
-        if (! $release_found)
-            throw new Engine_Exception(lang('configuration_backup_release_missing'), CLEAROS_ERROR);
-
-        // Check to see if release file matches
-        //-------------------------------------
-
-        $retval = $shell->execute(self::CMD_TAR, "-O -C /var/tmp -xzf $fullpath etc/clearos-release", TRUE);
-
-        $archive_version = trim($shell->get_first_output_line());
-
-        $file = new File("/etc/clearos-release");
-        $current_version = trim($file->get_contents());
-
-        if ($current_version != $archive_version) {
-            $err = lang('configuration_backup_release_mismatch') . ' (' . $archive_version . ')';
-            throw new Engine_Exception($err, CLEAROS_ERROR);
-        }
-    }
-
-    /**
-     * Put the backup file in the cache directory, ready for import begin.
-     *
-     * @param string $filename filename
-     *
-     * @filename string backup filename
-     * @return void
-     * @throws Engine_Exception, File_Not_Found_Exception
-     */
-
-    function set_backup_file($filename)
-    {
-        clearos_profile(__METHOD__, __LINE__);
-
-        $file = new File(CLEAROS_TEMP_DIR . '/' . $filename, TRUE);
-
-        // Move uploaded file to cache
-        $file->move_to(self::FOLDER_UPLOAD . '/' . $filename);
-        $file->chown('root', 'root'); 
-        $file->chmod(600);
     }
 
     /**
@@ -474,6 +411,8 @@ class Configuration_Backup extends Engine
     function delete_backup_file($filename)
     {
         clearos_profile(__METHOD__, __LINE__);
+
+        Validation_Exception::is_valid($this->validate_filename($filename));
 
         $file = new File(self::FOLDER_UPLOAD . '/' . $filename, TRUE);
 
@@ -493,9 +432,31 @@ class Configuration_Backup extends Engine
     {
         clearos_profile(__METHOD__, __LINE__);
 
+        Validation_Exception::is_valid($this->validate_filename($filename));
+
         $file = new File(self::FOLDER_UPLOAD . '/' . $filename, TRUE);
 
         return $file->get_size();
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////
+    // V A L I D A T I O N   M E T H O D S
+    ///////////////////////////////////////////////////////////////////////////////
+
+    /**
+     * Validation routine for filename.
+     *
+     * @param string $filename filename
+     *
+     * @return string error message if filename is invalid
+     */
+
+    public function validate_filename($filename)
+    {
+        clearos_profile(__METHOD__, __LINE__);
+
+        if (! preg_match('/^backup-[0-9a-zA-Z\.\-_]+$/', $filename))
+            return lang('configuration_backup_backup_file_invalid');
     }
 
     ///////////////////////////////////////////////////////////////////////////////
@@ -600,5 +561,82 @@ class Configuration_Backup extends Engine
             $openldap = new LDAP_Driver();
             $openldap->import();
         }
+    }
+
+    /**
+     * Verifies version information.
+     *
+     * @param string $fullpath filename of the archive
+     *
+     * @return void
+     * @throws Engine_Exception, Validation_Exception
+     */
+
+    function verify_archive($fullpath)
+    {
+        clearos_profile(__METHOD__, __LINE__);
+
+        // Validate
+        //---------
+
+        $file = new File($fullpath);
+
+        if (! $file->exists())
+            throw new File_Not_Found_Exception($fullpath);
+
+        // Check for /etc/release file (not stored in old versions)
+        //---------------------------------------------------------
+
+        $shell = new Shell();
+
+        $shell->execute(self::CMD_TAR, "-tzvf $fullpath", TRUE);
+        $files = $shell->get_output();
+
+        $release_found = FALSE;
+
+        foreach ($files as $file) {
+            if (preg_match("/ etc\/clearos-release$/", $file))
+                $release_found = TRUE;
+        }
+
+        if (! $release_found)
+            throw new Engine_Exception(lang('configuration_backup_release_missing'), CLEAROS_ERROR);
+
+        // Check to see if release file matches
+        //-------------------------------------
+
+        $retval = $shell->execute(self::CMD_TAR, "-O -C /var/tmp -xzf $fullpath etc/clearos-release", TRUE);
+
+        $archive_version = trim($shell->get_first_output_line());
+
+        $file = new File("/etc/clearos-release");
+        $current_version = trim($file->get_contents());
+
+        if ($current_version != $archive_version) {
+            $err = lang('configuration_backup_release_mismatch') . ' (' . $archive_version . ')';
+            throw new Engine_Exception($err, CLEAROS_ERROR);
+        }
+    }
+
+    /**
+     * Put the backup file in the cache directory, ready for import begin.
+     *
+     * @param string $filename filename
+     *
+     * @filename string backup filename
+     * @return void
+     * @throws Engine_Exception, File_Not_Found_Exception
+     */
+
+    function set_backup_file($filename)
+    {
+        clearos_profile(__METHOD__, __LINE__);
+
+        $file = new File(CLEAROS_TEMP_DIR . '/' . $filename, TRUE);
+
+        // Move uploaded file to cache
+        $file->move_to(self::FOLDER_UPLOAD . '/' . $filename);
+        $file->chown('root', 'root'); 
+        $file->chmod(600);
     }
 }

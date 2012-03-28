@@ -14,3 +14,4 @@ $lang['configuration_backup_release_mismatch'] = 'The version information in the
 $lang['configuration_backup_release_missing'] = 'The version information is not available in the backup file.';
 $lang['configuration_backup_archive_created'] = 'Archive created.';
 $lang['configuration_backup_archive_deleted'] = 'Archive deleted.';
+$lang['configuration_backup_backup_file_invalid'] = 'Backup file is invalid.';
