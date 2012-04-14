@@ -193,10 +193,8 @@ class Configuration_Backup extends Engine
         // Create the backup
         //------------------
 
-        // TODO: move hard-coded excludes to /etc/backup.conf
-
         $shell = new Shell();
-        $attr = '--exclude /etc/system/database --exclude /etc/postfix/filters --ignore-failed-read -cpzf ';
+        $attr = '--exclude=*.rpmnew --exclude=*.rpmsave --exclude=*blacklists* --ignore-failed-read -cpzf ';
 
         $args = self::FOLDER_BACKUP . '/' . $filename . ' ' . $manifest;
         $shell->execute(self::CMD_TAR, $attr . $args, TRUE);
@@ -546,11 +544,11 @@ class Configuration_Backup extends Engine
 
         $file = new File($fullpath);
 
-        if (! $file->Exists())
+        if (! $file->exists())
             throw new File_Not_Found_Exception(CLEAROS_ERROR);
 
         $shell = new Shell();
-        $shell->Execute(self::CMD_TAR, "-C / -xpzf $fullpath", TRUE);
+        $shell->execute(self::CMD_TAR, "-C / -xpzf $fullpath", TRUE);
 
         // Reload the LDAP database and reset LDAP-related daemons
         //--------------------------------------------------------
