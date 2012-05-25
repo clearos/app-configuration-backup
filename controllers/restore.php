@@ -75,7 +75,7 @@ class Restore extends ClearOS_Controller
         }
 
         $config['upload_path'] = CLEAROS_TEMP_DIR;
-        $config['allowed_types'] = 'tgz';
+        $config['allowed_types'] = 'tgz|gz';
         $config['overwrite'] = TRUE;
 
         $this->load->library('upload', $config);

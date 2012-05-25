@@ -59,6 +59,8 @@ use \clearos\apps\base\Engine as Engine;
 use \clearos\apps\base\File as File;
 use \clearos\apps\base\Folder as Folder;
 use \clearos\apps\base\Shell as Shell;
+use \clearos\apps\mode\Mode_Engine as Mode_Engine;
+use \clearos\apps\mode\Mode_Factory as Mode_Factory;
 use \clearos\apps\network\Hostname as Hostname;
 use \clearos\apps\openldap\LDAP_Driver as LDAP_Driver;
 
@@ -66,6 +68,8 @@ clearos_load_library('base/Engine');
 clearos_load_library('base/File');
 clearos_load_library('base/Folder');
 clearos_load_library('base/Shell');
+clearos_load_library('mode/Mode_Engine');
+clearos_load_library('mode/Mode_Factory');
 clearos_load_library('network/Hostname');
 clearos_load_library('openldap/LDAP_Driver');
 
@@ -106,10 +110,15 @@ class Configuration_Backup extends Engine
     const FILE_CONFIG = 'backup.conf';
     const FOLDER_BACKUP = '/var/clearos/configuration_backup';
     const FOLDER_UPLOAD = '/var/clearos/configuration_backup/upload';
+    const FOLDER_RESTORE = '/var/clearos/configuration_backup/restore';
     const CMD_TAR = '/bin/tar';
     const CMD_LS = '/bin/ls';
+
     const FILE_LIMIT = 10; // Maximum number of archives to keep
     const SIZE_LIMIT = 51200; // Maximum size of all archives
+
+    const RELEASE_MATCH = 'match';
+    const RELEASE_UPGRADE_52 = 'upgrade52';
 
     ///////////////////////////////////////////////////////////////////////////////
     // V A R I A B L E S
@@ -203,6 +212,68 @@ class Configuration_Backup extends Engine
         $archive->chmod(600);
 
         return self::FOLDER_BACKUP . '/' . $filename;
+    }
+
+    /**
+     * Verifies version information.
+     *
+     * @param string $full_path filename of the archive
+     *
+     * @return void
+     * @throws Engine_Exception, Validation_Exception
+     */
+
+    function check_archive_version($full_path)
+    {
+        clearos_profile(__METHOD__, __LINE__);
+
+        // Validate
+        //---------
+
+        $file = new File($full_path);
+
+        if (! $file->exists())
+            throw new File_Not_Found_Exception($full_path);
+
+        // Check for /etc/release file (not stored in old versions)
+        //---------------------------------------------------------
+
+        $shell = new Shell();
+
+        $shell->execute(self::CMD_TAR, "-tzvf $full_path", TRUE);
+        $files = $shell->get_output();
+
+        $release_found = '';
+
+        foreach ($files as $file) {
+            if (preg_match("/ etc\/clearos-release$/", $file))
+                $release_found = 'etc/clearos-release';
+
+            if (preg_match("/ etc\/release$/", $file))
+                $release_found = 'etc/release';
+        }
+
+        if (empty($release_found))
+            throw new Engine_Exception(lang('configuration_backup_release_missing'), CLEAROS_ERROR);
+
+        // Check to see if release file matches
+        //-------------------------------------
+
+        $retval = $shell->execute(self::CMD_TAR, "-O -C /var/tmp -xzf $full_path $release_found", TRUE);
+
+        $archive_version = trim($shell->get_first_output_line());
+
+        $file = new File('/etc/clearos-release');
+        $current_version = trim($file->get_contents());
+
+        if ($current_version == $archive_version) {
+            return self::RELEASE_MATCH;
+        } else if (preg_match('/release 5.2/', $archive_version)) {
+            return self::RELEASE_UPGRADE_52;
+        } else {
+            $error = lang('configuration_backup_release_mismatch') . ' (' . $archive_version . ')';
+            throw new Engine_Exception($err, CLEAROS_ERROR);
+        }
     }
 
     /**
@@ -485,7 +556,10 @@ class Configuration_Backup extends Engine
             return $archives;
 
         foreach ($contents as $value) {
-            if (! preg_match("/tgz$/", $value))
+            // CodeIgniter adds underscores in part of the file cleanup process.
+            // Shrug.  It's probably best to leave it alone.
+
+            if (! preg_match("/(tar_.gz|tar.gz|tgz)$/", $value))
                 continue;
 
             $archives[] = $value;
@@ -538,20 +612,45 @@ class Configuration_Backup extends Engine
     {
         clearos_profile(__METHOD__, __LINE__);
 
-        $fullpath = $path . '/' . $archive;
+        $full_path = $path . '/' . $archive;
 
-        $this->verify_archive($fullpath);
+        $version_state = $this->check_archive_version($full_path);
 
-        $file = new File($fullpath);
+        $file = new File($full_path);
 
         if (! $file->exists())
             throw new File_Not_Found_Exception(CLEAROS_ERROR);
 
-        $shell = new Shell();
-        $shell->execute(self::CMD_TAR, "-C / -xpzf $fullpath", TRUE);
+        // Perform restore
+        //----------------
 
-        // Reload the LDAP database and reset LDAP-related daemons
-        //--------------------------------------------------------
+        if ($version_state == self::RELEASE_MATCH)
+            $this->_restore_all($full_path);
+        else if ($version_state == self::RELEASE_UPGRADE_52)
+            $this->_restore_52($full_path);
+    }
+
+    /**
+     * Performs a full restore.
+     *
+     * @param string $full_path full path of configuration archive
+     *
+     * @return void
+     * @throws Engine_Exception
+     */
+
+    protected function _restore_all($full_path)
+    {
+        clearos_profile(__METHOD__, __LINE__);
+
+        // Unpack tar.gz
+        //--------------
+
+        $shell = new Shell();
+        $shell->execute(self::CMD_TAR, '-C / -xpzf ' . $full_path, TRUE);
+
+        // Reload the LDAP database
+        //-------------------------
 
         if (clearos_library_installed('openldap/LDAP_Driver')) {
             clearos_load_library('openldap/LDAP_Driver');
@@ -562,58 +661,143 @@ class Configuration_Backup extends Engine
     }
 
     /**
-     * Verifies version information.
+     * Performs a restore for version 5.2.
      *
-     * @param string $fullpath filename of the archive
+     * @param string $full_path full path of configuration archive
      *
      * @return void
-     * @throws Engine_Exception, Validation_Exception
+     * @throws Engine_Exception
      */
 
-    function verify_archive($fullpath)
+    protected function _restore_52($full_path)
     {
         clearos_profile(__METHOD__, __LINE__);
 
-        // Validate
-        //---------
+        // Unpack tar.gz
+        //--------------
 
-        $file = new File($fullpath);
+        $folder = new Folder(self::FOLDER_RESTORE);
 
-        if (! $file->exists())
-            throw new File_Not_Found_Exception($fullpath);
+        if ($folder->exists())
+            $folder->delete(TRUE);
 
-        // Check for /etc/release file (not stored in old versions)
-        //---------------------------------------------------------
+        $folder->create('root', 'root', '0755');
 
         $shell = new Shell();
+        $shell->execute(self::CMD_TAR, '-C ' . self::FOLDER_RESTORE . ' -xpzf ' . $full_path, TRUE);
 
-        $shell->execute(self::CMD_TAR, "-tzvf $fullpath", TRUE);
-        $files = $shell->get_output();
+        // Prepare LDAP import
+        //--------------------
+        // TODO: the openldap->import() should have the filename as the first parameter
 
-        $release_found = FALSE;
+        if (!clearos_library_installed('openldap_directory/OpenLDAP'))
+            return;
 
-        foreach ($files as $file) {
-            if (preg_match("/ etc\/clearos-release$/", $file))
-                $release_found = TRUE;
+        clearos_load_library('openldap/LDAP_Driver');
+        clearos_load_library('openldap_directory/OpenLDAP');
+
+        $openldap = new \clearos\apps\openldap_directory\OpenLDAP();
+        $ldap_driver = new \clearos\apps\openldap\LDAP_Driver();
+
+        // Grab domain and LDAP password for import
+        //-----------------------------------------
+
+        $file = new File(self::FOLDER_RESTORE . '/etc/kolab/kolab.conf');
+        $lines = $file->get_contents_as_array();
+        
+        $domain = '';
+        $ldap_password = '';
+
+        foreach ($lines as $line) {
+            $matches = array();
+
+            if (preg_match('/^base_dn\s*:\s*(.*)/', $line, $matches)) {
+                $domain = preg_replace('/,dc=/', '.', $matches[1]);
+                $domain = preg_replace('/^dc=/', '', $domain);
+            }
+
+            $matches = array();
+
+            if (preg_match('/^bind_pw\s*:\s*(.*)/', $line, $matches))
+                $ldap_password = $matches[1];
         }
 
-        if (! $release_found)
-            throw new Engine_Exception(lang('configuration_backup_release_missing'), CLEAROS_ERROR);
+        // Set mode
+        //---------
 
-        // Check to see if release file matches
+        $sysmode = Mode_Factory::create();
+        $mode = $sysmode->set_mode(Mode_Engine::MODE_MASTER);
+
+        // Intialize the underlying LDAP system
         //-------------------------------------
 
-        $retval = $shell->execute(self::CMD_TAR, "-O -C /var/tmp -xzf $fullpath etc/clearos-release", TRUE);
+        if (empty($domain) || empty($ldap_password))
+            throw new Engine_Exception(lang('configuration_backup_could_not_convert_directory'));
 
-        $archive_version = trim($shell->get_first_output_line());
+        $ldap_driver->initialize_master($domain, $ldap_password, TRUE);
 
-        $file = new File("/etc/clearos-release");
-        $current_version = trim($file->get_contents());
+        // Prep Samba domain SID
+        //----------------------
 
-        if ($current_version != $archive_version) {
-            $err = lang('configuration_backup_release_mismatch') . ' (' . $archive_version . ')';
-            throw new Engine_Exception($err, CLEAROS_ERROR);
+        // TODO: move this to samba->initialize(sid);
+        if (clearos_library_installed('samba/Samba')) {
+            $file = new File(self::FOLDER_RESTORE . '/etc/samba/domainsid');
+            $file->copy_to('/etc/samba/domainsid');
+
+            $file = new File(self::FOLDER_RESTORE . '/etc/samba/domainsid');
+            $file->copy_to('/etc/samba/localid');
         }
+
+        // Initialize the accounts LDAP layer
+        //-----------------------------------
+
+        $openldap->initialize($domain, TRUE);
+
+        // Initialize Samba
+        //-----------------
+
+        if (clearos_library_installed('samba/Samba')) {
+            clearos_load_library('samba/Samba'); 
+
+            $samba = new \clearos\apps\samba\Samba();
+            $samba->initialize();
+        }
+
+        // Import the old LDIF
+        //--------------------
+
+        $file = new File(self::FOLDER_RESTORE . '/etc/openldap/backup.ldif');
+
+        $lines = $file->get_contents_as_array();
+        $import_ldif = '';
+        $in_record = FALSE;
+
+        $ignore_list = array('createTimestamp', 'creatorsName', 'entryCSN', 'entryUUID', 'modifiersName', 'modifyTimestamp');
+
+        foreach ($lines as $line) {
+            if (preg_match('/^dn: .*ou=(Groups|Users),ou=Accounts/', $line)) {
+                $in_record = TRUE;
+            } else if ($in_record && preg_match('/^\s*$/', $line)) {
+                $import_ldif .= "\n";
+                $in_record = FALSE;
+            }
+
+            if ($in_record) {
+                $key = preg_replace('/: .*/', '', $line);
+                
+                if (! in_array($key, $ignore_list))
+                    $import_ldif .= $line . "\n";
+            }
+        }
+
+        $file = new File('/var/clearos/openldap/snapshot.ldif'); // Remove hard code - see previous comment.
+        $file->add_lines($import_ldif);
+
+        // FIXME: to be continued
+        // $ldap_driver->import();
+
+        // Convert LDAP entries
+        //---------------------
     }
 
     /**
