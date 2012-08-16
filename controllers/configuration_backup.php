@@ -134,6 +134,34 @@ class Configuration_Backup extends ClearOS_Controller
     }
 
     /**
+     * Restore using uploaded file.
+     *
+     * @param string  $filename file upload
+     *
+     * @return view
+     */
+
+    function upload_restore($filename)
+    {
+        // Load libraries
+        //---------------
+
+        $this->load->library('configuration_backup/Configuration_Backup');
+
+        // Handle form submit
+        //-------------------
+
+        try {
+            $this->configuration_backup->restore_by_upload($filename);
+            redirect('/configuration_backup');
+        } catch (Exception $e) {
+            $this->page->view_exception($e);
+            return;
+        }
+    }
+
+
+    /**
      * Restore using archive file.
      *
      * @param string  $filename archive filename

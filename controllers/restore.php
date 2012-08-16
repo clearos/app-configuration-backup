@@ -65,17 +65,8 @@ class Restore extends ClearOS_Controller
         // Handle form submit
         //-------------------
 
-        if ($this->input->post('cancel')) {
-            try {
-                $this->configuration_backup->delete_backup_file(CLEAROS_TEMP_DIR . '/' . $this->input->post['restore_file']);
-                redirect('/configuration_backup');
-            } catch (Exception $e) {
-                redirect('/configuration_backup');
-            }
-        }
-
         $config['upload_path'] = CLEAROS_TEMP_DIR;
-        $config['allowed_types'] = 'tgz|gz';
+        $config['allowed_types'] = 'tgz';
         $config['overwrite'] = TRUE;
 
         $this->load->library('upload', $config);
