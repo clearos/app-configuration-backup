@@ -42,7 +42,7 @@ $this->lang->load('configuration_backup');
 
 if ($restore_ready) {
     $buttons = array(
-        anchor_custom('configuration_backup/upload_restore/' . $filename, lang('base_restore'), 'high'),
+        anchor_custom('/app/configuration_backup/upload_restore/' . $filename, lang('base_restore'), 'high'),
         anchor_cancel('/app/configuration_backup')
     );
 } else {
