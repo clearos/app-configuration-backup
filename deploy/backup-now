@@ -1,0 +1,38 @@
+#!/usr/clearos/sandbox/usr/bin/php
+<?php
+
+/**
+ * Backup now script.
+ *
+ * Performs a configuration backup.
+ *
+ * @category   ClearOS
+ * @package    Configuration_Backup
+ * @subpackage Scripts
+ * @author     ClearFoundation <developer@clearfoundation.com>
+ * @copyright  2013 ClearFoundation
+ * @license    http://www.gnu.org/copyleft/lgpl.html GNU Lesser General Public License version 3 or later
+ * @link       http://www.clearfoundation.com/docs/developer/apps/configuration_backup/
+ */
+
+///////////////////////////////////////////////////////////////////////////////
+// B O O T S T R A P
+///////////////////////////////////////////////////////////////////////////////
+
+$bootstrap = getenv('CLEAROS_BOOTSTRAP') ? getenv('CLEAROS_BOOTSTRAP') : '/usr/clearos/framework/shared';
+require_once $bootstrap . '/bootstrap.php';
+
+///////////////////////////////////////////////////////////////////////////////
+// D E P E N D E N C I E S
+///////////////////////////////////////////////////////////////////////////////
+
+use \clearos\apps\configuration_backup\Configuration_Backup as Configuration_Backup;
+
+clearos_load_library('configuration_backup/Configuration_Backup');
+
+///////////////////////////////////////////////////////////////////////////////
+// M A I N
+///////////////////////////////////////////////////////////////////////////////
+
+$backup = new Configuration_Backup();
+$backup->backup();

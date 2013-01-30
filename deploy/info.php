@@ -5,7 +5,7 @@
 /////////////////////////////////////////////////////////////////////////////
 
 $app['basename'] = 'configuration_backup';
-$app['version'] = '1.4.14';
+$app['version'] = '1.4.16';
 $app['release'] = '1';
 $app['vendor'] = 'ClearFoundation';
 $app['packager'] = 'ClearFoundation';
@@ -32,7 +32,13 @@ $app['controllers']['configuration_backup']['title'] = $app['name'];
 /////////////////////////////////////////////////////////////////////////////
 
 $app['core_requires'] = array(
-    'app-network-core'
+    'app-base-core >= 1:1.4.15',
+    'app-network-core',
+    'app-tasks-core'
+);
+
+$app['core_file_manifest'] = array(
+    'app-configuration-backup.cron' => array('target' => '/etc/cron.d/app-configuration-backup'),
 );
 
 $app['core_directory_manifest'] = array(

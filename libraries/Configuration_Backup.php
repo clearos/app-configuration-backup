@@ -1,13 +1,13 @@
 <?php
 
 /**
- * Configuration backup/restore class.
+ * Configuration backup and restore class.
  *
  * @category   Apps
  * @package    Configuration_Backup
  * @subpackage Libraries
  * @author     ClearFoundation <developer@clearfoundation.com>
- * @copyright  2003-2011 ClearFoundation
+ * @copyright  2003-2013 ClearFoundation
  * @license    http://www.gnu.org/copyleft/lgpl.html GNU Lesser General Public License version 3 or later
  * @link       http://www.clearfoundation.com/docs/developer/apps/configuration_backup/
  */
@@ -96,7 +96,7 @@ clearos_load_library('base/Validation_Exception');
  * @package    Configuration_Backup
  * @subpackage Libraries
  * @author     ClearFoundation <developer@clearfoundation.com>
- * @copyright  2003-2011 ClearFoundation
+ * @copyright  2003-2013 ClearFoundation
  * @license    http://www.gnu.org/copyleft/lgpl.html GNU Lesser General Public License version 3 or later
  * @link       http://www.clearfoundation.com/docs/developer/apps/configuration_backup/
  */
@@ -328,7 +328,7 @@ class Configuration_Backup extends Engine
     }
 
     /**
-     * Returns full path name.
+     * Returns full path name for download.
      *
      * @param string $filename filename
      *
@@ -469,7 +469,7 @@ class Configuration_Backup extends Engine
     }
 
     /**
-     * Resets (deletes) the backup file.
+     * Deletes backup file.
      *
      * @param string $filename filename
      *
@@ -489,7 +489,7 @@ class Configuration_Backup extends Engine
     }
 
     /**
-     * Fetches the size of a backup file.
+     * Returns the size of a backup file.
      *
      * @param string $filename filename
      *
@@ -508,6 +508,28 @@ class Configuration_Backup extends Engine
         return $file->get_size();
     }
 
+    /**
+     * Put the backup file in the cache directory, ready for import begin.
+     *
+     * @param string $filename filename
+     *
+     * @filename string backup filename
+     * @return void
+     * @throws Engine_Exception, File_Not_Found_Exception
+     */
+
+    function set_backup_file($filename)
+    {
+        clearos_profile(__METHOD__, __LINE__);
+
+        $file = new File(CLEAROS_TEMP_DIR . '/' . $filename, TRUE);
+
+        // Move uploaded file to cache
+        $file->move_to(self::FOLDER_UPLOAD . '/' . $filename);
+        $file->chown('root', 'root'); 
+        $file->chmod(600);
+    }
+
     ///////////////////////////////////////////////////////////////////////////////
     // V A L I D A T I O N   M E T H O D S
     ///////////////////////////////////////////////////////////////////////////////
@@ -520,7 +542,7 @@ class Configuration_Backup extends Engine
      * @return string error message if filename is invalid
      */
 
-    public function validate_filename($filename)
+    function validate_filename($filename)
     {
         clearos_profile(__METHOD__, __LINE__);
 
@@ -542,7 +564,7 @@ class Configuration_Backup extends Engine
      * @throws Engine_Exception
      */
 
-    private function _get_list($path)
+    protected function _get_list($path)
     {
         clearos_profile(__METHOD__, __LINE__);
 
@@ -576,7 +598,7 @@ class Configuration_Backup extends Engine
      * @throws Engine_Exception
      */
 
-    private function _read_config()
+    protected function _read_config()
     {
         clearos_profile(__METHOD__, __LINE__);
 
@@ -608,7 +630,7 @@ class Configuration_Backup extends Engine
      * @throws Engine_Exception, Validation_Exception
      */
 
-    private function _restore($path, $archive)
+    protected function _restore($path, $archive)
     {
         clearos_profile(__METHOD__, __LINE__);
 
@@ -798,27 +820,5 @@ class Configuration_Backup extends Engine
 
         // Convert LDAP entries
         //---------------------
-    }
-
-    /**
-     * Put the backup file in the cache directory, ready for import begin.
-     *
-     * @param string $filename filename
-     *
-     * @filename string backup filename
-     * @return void
-     * @throws Engine_Exception, File_Not_Found_Exception
-     */
-
-    function set_backup_file($filename)
-    {
-        clearos_profile(__METHOD__, __LINE__);
-
-        $file = new File(CLEAROS_TEMP_DIR . '/' . $filename, TRUE);
-
-        // Move uploaded file to cache
-        $file->move_to(self::FOLDER_UPLOAD . '/' . $filename);
-        $file->chown('root', 'root'); 
-        $file->chmod(600);
     }
 }

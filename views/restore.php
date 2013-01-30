@@ -47,7 +47,7 @@ if ($restore_ready) {
     );
 } else {
     $buttons = array(
-        form_submit_custom('upload', lang('configuration_backup_upload'), 'high')
+        form_submit_custom('upload', lang('base_upload'), 'high')
     );
 }
 
