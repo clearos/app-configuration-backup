@@ -73,13 +73,13 @@ class Configuration_Backup extends ClearOS_Controller
 
         $views = array('configuration_backup/restore', 'configuration_backup/archives');
 
-		$this->page->view_forms($views, lang('configuration_backup_configuration_backup'));
+        $this->page->view_forms($views, lang('configuration_backup_configuration_backup'));
     }
 
     /**
      * Download archive file.
      *
-     * @param string  $filename archive filename
+     * @param string $filename archive filename
      *
      * @return view
      */
@@ -95,18 +95,22 @@ class Configuration_Backup extends ClearOS_Controller
             return;
         }
 
+        @apache_setenv('no-gzip', 1); 
+	$prepared_filename = $this->configuration_backup->prepare_download($filename);
         header('Content-type: application/tgz');
         header('Content-Disposition: attachment; filename=' . $filename);
         header('Pragma: no-cache');
         header('Expires: 0');
-
-        readfile($this->configuration_backup->prepare_download($filename));
+        header('Content-Length: ' . filesize($prepared_filename));
+        ob_clean();
+        flush();
+        readfile($prepared_filename);
     }
 
     /**
      * Destroys archive file.
      *
-     * @param string  $filename archive filename
+     * @param string $filename archive filename
      *
      * @return view
      */
@@ -136,7 +140,7 @@ class Configuration_Backup extends ClearOS_Controller
     /**
      * Restore using uploaded file.
      *
-     * @param string  $filename file upload
+     * @param string $filename file upload
      *
      * @return view
      */
@@ -164,7 +168,7 @@ class Configuration_Backup extends ClearOS_Controller
     /**
      * Restore using archive file.
      *
-     * @param string  $filename archive filename
+     * @param string $filename archive filename
      *
      * @return view
      */
