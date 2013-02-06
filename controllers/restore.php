@@ -1,13 +1,13 @@
 <?php
 
 /**
- * Configuration backup controller.
+ * Configuration restore controller.
  *
  * @category   Apps
- * @package    Configuration Backup
+ * @package    Configuration_Backup
  * @subpackage Controllers
  * @author     ClearFoundation <developer@clearfoundation.com>
- * @copyright  2011 ClearFoundation
+ * @copyright  2011-2013 ClearFoundation
  * @license    http://www.gnu.org/copyleft/gpl.html GNU General Public License version 3 or later
  * @link       http://www.clearfoundation.com/docs/developer/apps/configuration_backup/
  */
@@ -43,16 +43,22 @@ use \clearos\apps\configuration_backup\Configuration_Backup as Configuration_Bac
  * Configuration restore controller.
  *
  * @category   Apps
- * @package    Configuration Backup
+ * @package    Configuration_Backup
  * @subpackage Controllers
  * @author     ClearFoundation <developer@clearfoundation.com>
- * @copyright  2011 ClearFoundation
+ * @copyright  2011-2013 ClearFoundation
  * @license    http://www.gnu.org/copyleft/gpl.html GNU General Public License version 3 or later
  * @link       http://www.clearfoundation.com/docs/developer/apps/configuration_backup/
  */
 
 class Restore extends ClearOS_Controller
 {
+    /**
+     * Restore summary.
+     *
+     * @return view
+     */
+
     function index()
     {
         // Load dependencies
