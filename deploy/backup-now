@@ -36,3 +36,4 @@ clearos_load_library('configuration_backup/Configuration_Backup');
 
 $backup = new Configuration_Backup();
 $backup->backup();
+$backup->purge();
