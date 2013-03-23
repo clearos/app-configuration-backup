@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Configuration Backup restore view.
+ * Configuration Backup restore progress.
  *
  * @category   Apps
  * @package    Configuration_Backup
@@ -9,7 +9,7 @@
  * @author     ClearFoundation <developer@clearfoundation.com>
  * @copyright  2011 ClearFoundation
  * @license    http://www.gnu.org/copyleft/gpl.html GNU General Public License version 3 or later
- * @link       http://www.clearcenter.com/support/documentation/clearos/configuration_backup/
+ * @link       http://www.clearfoundation.com/docs/developer/apps/configuration_backup/
  */
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -36,36 +36,7 @@
 $this->lang->load('base');
 $this->lang->load('configuration_backup');
 
-///////////////////////////////////////////////////////////////////////////////
-// Form handler
-///////////////////////////////////////////////////////////////////////////////
-
-if ($restore_ready) {
-    $buttons = array(
-        anchor_custom('/app/configuration_backup/start_restore/' . $filename . '/1', lang('base_restore'), 'high'),
-        anchor_cancel('/app/configuration_backup')
-    );
-} else {
-    $buttons = array(
-        form_submit_custom('upload', lang('configuration_backup_upload'), 'high'),
-    );
-    if ($show_cancel)
-        $buttons[] = anchor_cancel('/app/configuration_backup');
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// Form
-///////////////////////////////////////////////////////////////////////////////
-
-echo form_open_multipart('configuration_backup/restore');
-echo form_header(lang('configuration_backup_restore_from_archive'), array('id' => 'upload_form'));
-
-echo field_file('restore_file', $filename, lang('configuration_backup_restore_file'), $restore_ready);
-
-if ($restore_ready)
-    echo field_file('size', $size, lang('base_file_size'), $restore_ready);
-
-echo field_button_set($buttons);
-
-echo form_footer();
-echo form_close();
+echo "<h2>" . lang('base_progress') . "</h2>";
+echo "<div style='padding-bottom: 30px;'>";
+echo progress_bar('progress', array('input' => 'progress'));
+echo "</div>";

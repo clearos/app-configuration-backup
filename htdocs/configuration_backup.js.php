@@ -50,7 +50,7 @@ function get_status() {
     $.ajax({
         type: 'GET',
         dataType: 'json',
-        url: '/app/configuration_backup/get_status',
+        url: '/app/configuration_backup/get_restore_progress',
         data: '',
         success: function(data) {
             if (data == undefined || data.code == null) {
@@ -58,31 +58,48 @@ function get_status() {
                 return;
             }
                 
-            if (data.code != 0) {
-                $('#configuration_backup_info_box').show();
-                $('#configuration_backup_details').removeClass('theme-loading-normal');
-                $('#configuration_backup_details').html(data.status);
-                $('.ui-buttonset :input').attr('disabled', false);
-                $('.ui-buttonset :input').removeClass('ui-state-disabled');
-                $('.ui-buttonset [href]').removeClass('ui-state-disabled');
+            if (data.code < 0) {
+                table_logs.fnClearTable();
             } else {
-                if (data.status == 'not_running') {
-                    $('.ui-buttonset :input').attr('disabled', false);
-                    $('.ui-buttonset :input').removeClass('ui-state-disabled');
-                    $('.ui-buttonset [href]').removeClass('ui-state-disabled');
-                    $('#configuration_backup_info_box').hide();
-                } else {
-                    $('.ui-buttonset :input').attr('disabled', true);
-                    $('#configuration_backup_info_box').show();
-                    $('#configuration_backup_details').html(data.status);
-                    $('.ui-buttonset :input').addClass('ui-state-disabled');
-                    $('.ui-buttonset [href]').addClass('ui-state-disabled');
-                    if (data.progress == 100)
-                        $('#configuration_backup_details').removeClass('theme-loading-normal');
-               }
-            	window.setTimeout(get_status, 1000);
+//                    $('.ui-buttonset :input').attr('disabled', false);
+//                    $('.ui-buttonset :input').removeClass('ui-state-disabled');
+//                    $('.ui-buttonset [href]').removeClass('ui-state-disabled');
+//                    $('#configuration_backup_info_box').hide();
+//                    $('.ui-buttonset :input').attr('disabled', true);
+//                    $('#configuration_backup_info_box').show();
+//                    $('#configuration_backup_details').html(data.status);
+//                    $('.ui-buttonset :input').addClass('ui-state-disabled');
+//                    $('.ui-buttonset [href]').addClass('ui-state-disabled');
+//                    if (data.progress == 100)
+//                        $('#configuration_backup_details').removeClass('theme-loading-normal');
+                // Logs
+                if (data.logs != undefined && data.logs != null && $('#logs').length > 0) {
+                    table_logs.fnClearTable();
+                    var progress = 0;
+                    for (var index = 0 ; index < data.logs.length; index++) {
+                        if (data.logs[index] == null)
+                            continue;
+                        date = new Date(data.logs[index].timestamp*1000);
+                        span_tag = '<span>';
+                        if (data.logs[index].code != 0)
+                            span_tag = '<span style=\'color: red;\'>';
+                        table_logs.fnAddData([
+                            span_tag + data.logs[index].msg + '</span>',
+                            span_tag + $.datepicker.formatDate('M d, yy', date) + ' ' + date.toLocaleTimeString() + '</span>'
+                        ]);
+                        if (index == 0) {
+                            $('#progress').progressbar({
+                                value: Math.round(data.logs[index].progress)
+                            });
+                        }
+                    }
+                    table_logs.fnAdjustColumnSizing();
+                    table_logs.each(function(){
+                        $(this).find('td:eq(1)').attr('nowrap', 'nowrap');
+                    });
+                }
+                window.setTimeout(get_status, 1000);
             }
-
         },
         error: function(xhr, text, err) {
             // Don't display any errors if ajax request was aborted due to page redirect/reload

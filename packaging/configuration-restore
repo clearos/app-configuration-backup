@@ -155,15 +155,14 @@ function restore($filename)
     global $configuration_backup;
     clearos_profile(__METHOD__, __LINE__);
 
-    update_status(0, 1, lang('configuration_backup_stopping_clearsyncd'));
+    update_status(0, 5, lang('configuration_backup_restore_init'));
+
+    update_status(0, 10, lang('configuration_backup_stopping_clearsyncd'));
     $daemon = new Daemon('clearsyncd');
     $daemon->set_running_state(FALSE);
 
-    update_status(0, 5, lang('configuration_backup_restore_init'));
-    sleep(1);
 
-    update_status(0, 10, lang('configuration_backup_restore_file') . ": $filename");
-    sleep(1);
+    update_status(0, 15, lang('configuration_backup_restore_file') . ": $filename");
 
     $file = new File($filename);
     if (!$file->exists()) {
@@ -177,32 +176,31 @@ function restore($filename)
     }
 
     // Check version compatibility
-    update_status(0, 5, lang('configuration_backup_checking_version'));
-    sleep(1);
+    update_status(0, 20, lang('configuration_backup_checking_version'));
 
     try {
         $configuration_backup->check_archive_version($filename);
     } catch (Exception $e) {
         update_status(1, 5, clearos_exception_message($e));
-	exit(1);
+        exit(1);
     }
 
     // Unpack tar.gz
     //--------------
 
-    update_status(0, 10, lang('configuration_backup_unpacking_archive'));
+    update_status(0, 25, lang('configuration_backup_unpacking_archive'));
     $shell = new Shell();
     $shell->execute(Configuration_Backup::CMD_TAR, '-C / -xpzf ' . $filename, TRUE);
 
     // Install Marketplace Apps
     //-------------------------
     try {
+        update_status(0, 30, lang('configuration_backup_download_and_intstall_apps'));
         $file = new File(CLEAROS_TEMP_DIR . '/' . Configuration_Backup::FILE_INSTALLED_APPS);
         $list = $file->get_contents_as_array();
         $yum = new Yum();
         $counter = 0;
         if ($yum->is_busy()) {
-            sleep(1);
             $counter++;
             if ($counter > 120)
                 throw new Exception (lang('configuration_backup_yum_busy'));
@@ -216,17 +214,17 @@ function restore($filename)
             $logs = $yum->get_logs();
             if (is_array($logs) && !empty($logs)) {
                 $log = json_decode(end($logs));
-                update_status(0, 20, $log->details);
+                update_status(0, 40, $log->details);
             }
             if (!$yum->is_wc_busy)
                 break;
             sleep(1);
         }
     } catch (File_Not_Found_Exception $e) {
-        update_status(0, 15, 'Older version of backup do not include app install manifest.  Please install required apps from the Marketplace');
+        update_status(0, 50, lang('configuration_backup_older_version_warn'));
     } catch (Exception $e) {
         // Report it, but keep going
-        update_status(0, 15, clearos_exception_message($e));
+        update_status(0, 50, clearos_exception_message($e));
     }
     
     // Reload the LDAP database
@@ -235,8 +233,7 @@ function restore($filename)
     if (clearos_library_installed('openldap/LDAP_Driver')) {
         clearos_load_library('openldap/LDAP_Driver');
 
-        update_status(0, 50, lang('configuration_backup_importing_ldap'));
-        sleep(1);
+        update_status(0, 60, lang('configuration_backup_importing_ldap'));
         $openldap = new LDAP_Driver();
         $openldap->import();
         update_status(0, 70, lang('configuration_backup_restarting_daemon') . ": slapd");
@@ -271,24 +268,20 @@ function restore($filename)
 
         $daemon = new Daemon($dname);
         update_status(0, 80, lang('configuration_backup_restarting_daemon') . ": " . $dname);
-	try {
+        try {
             $daemon->restart(FALSE);
         } catch (Engine_Exception $e) {
-            update_status(-1, 0, clearos_exception_message($e));
-            sleep(2);
+            update_status(-1, 0, preg_replace('/\.$/', ' - ', clearos_exception_message($e)) . $dname);
             continue;
         }
-        sleep(1);
     }
 
-    update_status(0, 99, lang('configuration_backup_starting_clearsyncd'));
+    update_status(0, 90, lang('configuration_backup_starting_clearsyncd'));
     $daemon = new Daemon('clearsyncd');
     $daemon->set_running_state(TRUE);
-    sleep(1);
 
     update_status(0, 100, lang('configuration_backup_restore_complete'));
-    // Allow user to see complete message in Webconfig
-    sleep(3);
+    exit(0);
 }
 
 /**
@@ -311,6 +304,12 @@ function update_status($code, $progress, $msg)
         $file = new File(CLEAROS_TEMP_DIR . "/" . Configuration_Backup::FILE_STATUS, FALSE);
         if (!$file->exists())
             $file->create('webconfig','webconfig', 644);
+        $lines = $file->get_contents_as_array();
+        if (!empty($lines)) {
+            $last_log = json_decode(end($lines));
+            if ($last_log->msg == $msg)
+                continue;
+        }
         $info = array (
         'code' => $code,
             'timestamp' => time(),

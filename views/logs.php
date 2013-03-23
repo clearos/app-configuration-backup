@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Configuration Backup restore view.
+ * Configuration Backup restore log view.
  *
  * @category   Apps
  * @package    Configuration_Backup
@@ -37,35 +37,40 @@ $this->lang->load('base');
 $this->lang->load('configuration_backup');
 
 ///////////////////////////////////////////////////////////////////////////////
-// Form handler
+// Buttons
 ///////////////////////////////////////////////////////////////////////////////
 
-if ($restore_ready) {
-    $buttons = array(
-        anchor_custom('/app/configuration_backup/start_restore/' . $filename . '/1', lang('base_restore'), 'high'),
-        anchor_cancel('/app/configuration_backup')
-    );
+if ($in_progress) {
+    $buttons = NULL;
 } else {
     $buttons = array(
-        form_submit_custom('upload', lang('configuration_backup_upload'), 'high'),
+        anchor_custom(
+            '/app/configuration_backup/logs/clear', lang('configuration_backup_clear'), 'high'
+        )
     );
-    if ($show_cancel)
-        $buttons[] = anchor_cancel('/app/configuration_backup');
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// Form
+// Headers
 ///////////////////////////////////////////////////////////////////////////////
 
-echo form_open_multipart('configuration_backup/restore');
-echo form_header(lang('configuration_backup_restore_from_archive'), array('id' => 'upload_form'));
+$headers = array(
+        lang('base_description'),
+        lang('base_timestamp')
+);
 
-echo field_file('restore_file', $filename, lang('configuration_backup_restore_file'), $restore_ready);
+///////////////////////////////////////////////////////////////////////////////
+// List table
+///////////////////////////////////////////////////////////////////////////////
 
-if ($restore_ready)
-    echo field_file('size', $size, lang('base_file_size'), $restore_ready);
+echo form_open('configuration_backup');
 
-echo field_button_set($buttons);
+echo summary_table(
+    lang('configuration_backup_restore_log'),
+    $buttons,
+    $headers,
+    NULL,
+    array('id' => 'logs', 'sort' => FALSE, 'paginate' => TRUE, 'no_action' => TRUE)
+);
 
-echo form_footer();
 echo form_close();

@@ -197,8 +197,7 @@ class Configuration_Backup extends Engine
         // Dump the app RPM list
         //----------------------
         $shell = new Shell();
-        $args = "-qa --queryformat='%{NAME}\n' | grep ^app- | sort > " .
-            CLEAROS_TEMP_DIR . "/" . self::FILE_INSTALLED_APPS;
+        $args = "-qa --queryformat='%{NAME}\n' | grep ^app- | sort > " . CLEAROS_TEMP_DIR . "/" . self::FILE_INSTALLED_APPS;
         $shell->execute(self::CMD_RPM, $args);
 
         // Dump the current LDAP database
@@ -469,10 +468,7 @@ class Configuration_Backup extends Engine
             $shell->execute(self::CMD_RESTORE, "-f=" . $filename, TRUE, $options);
 
         } catch (Exception $e) {
-            throw new Engine_Exception(
-                lang('configuration_backup_unable_to_start_restore') . ": " . clearos_exception_message($e),
-                CLEAROS_WARNING
-            );
+            throw new Engine_Exception(lang('configuration_backup_unable_to_start_restore') . ": " . clearos_exception_message($e), CLEAROS_WARNING);
         }
     }
 
@@ -492,10 +488,7 @@ class Configuration_Backup extends Engine
             $exe = pathinfo(self::CMD_RESTORE, PATHINFO_FILENAME);
             $exitcode = $shell->execute(self::CMD_PS, " afx | grep $exe 2>&1 & echo $!", FALSE);
             if ($exitcode != 0)
-                throw new Engine_Exception(
-                    lang('configuration_backup_unable_to_determine_running_state'),
-                    CLEAROS_WARNING
-                );
+                throw new Engine_Exception(lang('configuration_backup_unable_to_determine_running_state'), CLEAROS_WARNING);
             $rows = $shell->get_output();
             $pid = -1;
             foreach ($rows as $row) {
@@ -555,33 +548,33 @@ class Configuration_Backup extends Engine
     }
 
     /**
-     * Returns JSON-encoded data indicating status of restore operation.
+     * Returns JSON-encoded data indicating progress of restore operation.
      *
-     * @return string
+     * @return array
      * @throws Engine_Exception
      */
 
-    function get_restore_status()
+    function get_restore_progress()
     {
         clearos_profile(__METHOD__, __LINE__);
 
         try {
             $file = new File(CLEAROS_TEMP_DIR . "/" . self::FILE_STATUS, FALSE);
             $status = array();
-            if (!$file->exists()) {
-                $status['code'] = 0;
-                $status['timestamp'] = time();
-                $status['progress'] = 0;
-                $status['msg'] = 'not_running';
-                return $status;
-            }
+            if (!$file->exists())
+                throw new Engine_Exception(lang('configuration_backup_no_data'));
 
             $lines = $file->get_contents_as_array();
 
             if (empty($lines))
                 throw new Engine_Exception(lang('configuration_backup_no_data'));
+            else
+                $lines = array_reverse($lines);
 
-            return json_decode(end($lines));
+            foreach ($lines as $line)
+                $status[] = json_decode($line);
+            
+            return $status;
         } catch (Exception $e) {
             throw new Engine_Exception(clearos_exception_message($e));
         }
@@ -590,7 +583,6 @@ class Configuration_Backup extends Engine
     /**
      * Reset status.
      *
-     * @return void
      * @throws Engine_Exception
      */
 

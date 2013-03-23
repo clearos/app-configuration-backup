@@ -57,10 +57,12 @@ class Configuration_Backup extends ClearOS_Controller
     /**
      * Configuration_Backup default controller
      *
+     * @param String $start force start of import
+     *
      * @return view
      */
 
-    function index()
+    function index($start)
     {
         // Load dependencies
         //------------------
@@ -75,13 +77,16 @@ class Configuration_Backup extends ClearOS_Controller
             return;
         }
 
-        // Reset our status flag used in Javascript
-        $this->configuration_backup->reset_restore_status();
-
         // Load views
         //-----------
 
-        $views = array('configuration_backup/restore', 'configuration_backup/archives');
+        if ($start || $this->configuration_backup->is_restore_in_progress()) {
+            $views = array('configuration_backup/progress', 'configuration_backup/logs');
+        } else {
+            $views = array('configuration_backup/restore', 'configuration_backup/archives');
+            if (file_exists(CLEAROS_TEMP_DIR . "/" . Backup::FILE_STATUS))
+                $views[] = 'configuration_backup/logs';
+        }
 
         $this->page->view_forms($views, lang('configuration_backup_configuration_backup'));
     }
@@ -150,8 +155,7 @@ class Configuration_Backup extends ClearOS_Controller
     /**
      * Restore using uploaded file.
      *
-     * @param string  $filename file upload
-     * @param boolean $upload   specify upload flag
+     * @param string $filename file upload
      *
      * @return view
      */
@@ -168,7 +172,7 @@ class Configuration_Backup extends ClearOS_Controller
 
         try {
             $this->configuration_backup->restore($filename, $upload);
-            redirect('/configuration_backup');
+            redirect('/configuration_backup/index/start');
         } catch (Exception $e) {
             $this->page->view_exception($e);
             return;
@@ -204,12 +208,12 @@ class Configuration_Backup extends ClearOS_Controller
     }
 
     /**
-     * Get status of restore.
+     * Get restore progress.
      *
      * @return JSON
      */
 
-    function get_status()
+    function get_restore_progress()
     {
         clearos_profile(__METHOD__, __LINE__);
 
@@ -223,8 +227,8 @@ class Configuration_Backup extends ClearOS_Controller
         $this->lang->load('configuration_backup');
 
         try {
-            $status = $this->configuration_backup->get_restore_status();
-            echo json_encode(Array('code' => $status->code, 'status' => $status->msg, 'progress' => $status->progress));
+            $logs = $this->configuration_backup->get_restore_progress();
+            echo json_encode(Array('code' => 0, 'logs' => $logs));
         } catch (Exception $e) {
             echo json_encode(Array('code' => clearos_exception_code($e), 'errmsg' => clearos_exception_message($e)));
         }
