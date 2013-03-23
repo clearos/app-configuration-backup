@@ -4,3 +4,4 @@
 #--------------------
 
 /usr/sbin/addsudo /bin/tar app-configuration-backup
+/usr/sbin/addsudo /usr/sbin/configuration-restore app-configuration-backup

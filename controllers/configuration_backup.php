@@ -68,6 +68,16 @@ class Configuration_Backup extends ClearOS_Controller
         $this->load->library('configuration_backup/Configuration_Backup');
         $this->lang->load('configuration_backup');
 
+        // TODO - Add registration 'is registered' function 
+        if (!file_exists('/var/clearos/registration/registered')) {
+            $this->page->set_message(lang('configuration_backup_not_registered'), 'warning');
+            redirect('registration/register');
+            return;
+        }
+
+        // Reset our status flag used in Javascript
+        $this->configuration_backup->reset_restore_status();
+
         // Load views
         //-----------
 
@@ -96,7 +106,7 @@ class Configuration_Backup extends ClearOS_Controller
         }
 
         @apache_setenv('no-gzip', 1); 
-	$prepared_filename = $this->configuration_backup->prepare_download($filename);
+        $prepared_filename = $this->configuration_backup->prepare_download($filename);
         header('Content-type: application/tgz');
         header('Content-Disposition: attachment; filename=' . $filename);
         header('Pragma: no-cache');
@@ -140,12 +150,13 @@ class Configuration_Backup extends ClearOS_Controller
     /**
      * Restore using uploaded file.
      *
-     * @param string $filename file upload
+     * @param string  $filename file upload
+     * @param boolean $upload   specify upload flag
      *
      * @return view
      */
 
-    function upload_restore($filename)
+    function start_restore($filename, $upload = FALSE)
     {
         // Load libraries
         //---------------
@@ -156,42 +167,13 @@ class Configuration_Backup extends ClearOS_Controller
         //-------------------
 
         try {
-            $this->configuration_backup->restore_by_upload($filename);
+            $this->configuration_backup->restore($filename, $upload);
             redirect('/configuration_backup');
         } catch (Exception $e) {
             $this->page->view_exception($e);
             return;
         }
     }
-
-
-    /**
-     * Restore using archive file.
-     *
-     * @param string $filename archive filename
-     *
-     * @return view
-     */
-
-    function archive_restore($filename)
-    {
-        // Load libraries
-        //---------------
-
-        $this->load->library('configuration_backup/Configuration_Backup');
-
-        // Handle form submit
-        //-------------------
-
-        try {
-            $this->configuration_backup->restore_by_archive($filename);
-            redirect('/configuration_backup');
-        } catch (Exception $e) {
-            $this->page->view_exception($e);
-            return;
-        }
-    }
-
 
     /**
      * Take a backup snaphot.
@@ -221,4 +203,30 @@ class Configuration_Backup extends ClearOS_Controller
         }
     }
 
+    /**
+     * Get status of restore.
+     *
+     * @return JSON
+     */
+
+    function get_status()
+    {
+        clearos_profile(__METHOD__, __LINE__);
+
+        header('Cache-Control: no-cache, must-revalidate');
+        header('Content-type: application/json');
+
+        // Load dependencies
+        //------------------
+
+        $this->load->library('configuration_backup/Configuration_Backup');
+        $this->lang->load('configuration_backup');
+
+        try {
+            $status = $this->configuration_backup->get_restore_status();
+            echo json_encode(Array('code' => $status->code, 'status' => $status->msg, 'progress' => $status->progress));
+        } catch (Exception $e) {
+            echo json_encode(Array('code' => clearos_exception_code($e), 'errmsg' => clearos_exception_message($e)));
+        }
+    }
 }

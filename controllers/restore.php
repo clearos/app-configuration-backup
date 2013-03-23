@@ -1,13 +1,13 @@
 <?php
 
 /**
- * Configuration restore controller.
+ * Configuration backup controller.
  *
  * @category   Apps
- * @package    Configuration_Backup
+ * @package    Configuration Backup
  * @subpackage Controllers
  * @author     ClearFoundation <developer@clearfoundation.com>
- * @copyright  2011-2013 ClearFoundation
+ * @copyright  2011 ClearFoundation
  * @license    http://www.gnu.org/copyleft/gpl.html GNU General Public License version 3 or later
  * @link       http://www.clearfoundation.com/docs/developer/apps/configuration_backup/
  */
@@ -43,22 +43,16 @@ use \clearos\apps\configuration_backup\Configuration_Backup as Configuration_Bac
  * Configuration restore controller.
  *
  * @category   Apps
- * @package    Configuration_Backup
+ * @package    Configuration Backup
  * @subpackage Controllers
  * @author     ClearFoundation <developer@clearfoundation.com>
- * @copyright  2011-2013 ClearFoundation
+ * @copyright  2011 ClearFoundation
  * @license    http://www.gnu.org/copyleft/gpl.html GNU General Public License version 3 or later
  * @link       http://www.clearfoundation.com/docs/developer/apps/configuration_backup/
  */
 
 class Restore extends ClearOS_Controller
 {
-    /**
-     * Restore summary.
-     *
-     * @return view
-     */
-
     function index()
     {
         // Load dependencies
@@ -80,8 +74,10 @@ class Restore extends ClearOS_Controller
         $data['filename'] = '';
         $data['restore_ready'] = FALSE;
         $data['size'] = 0;
+        $data['show_cancel'] = FALSE;
 
         if ($this->input->post('upload') && !$this->upload->do_upload('restore_file')) {
+            $data['show_cancel'] = TRUE;
             $this->page->set_message($this->upload->display_errors());
         } else if ($this->input->post('upload')) {
             $upload = $this->upload->data();

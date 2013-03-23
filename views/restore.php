@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Configuration Backup and Restore overview.
+ * Configuration Backup restore view.
  *
  * @category   Apps
  * @package    Configuration_Backup
@@ -37,18 +37,33 @@ $this->lang->load('base');
 $this->lang->load('configuration_backup');
 
 ///////////////////////////////////////////////////////////////////////////////
+// Warning box
+///////////////////////////////////////////////////////////////////////////////
+
+echo "<div id='configuration_backup_info_box' class='theme-hidden'>";
+
+echo infobox_highlight(
+    lang('base_information'),
+    "<div class='theme-loading-normal' id='configuration_backup_details'></div>"
+);
+
+echo "</div>";
+
+///////////////////////////////////////////////////////////////////////////////
 // Form handler
 ///////////////////////////////////////////////////////////////////////////////
 
 if ($restore_ready) {
     $buttons = array(
-        anchor_custom('/app/configuration_backup/upload_restore/' . $filename, lang('base_restore'), 'high'),
+        anchor_custom('/app/configuration_backup/start_restore/' . $filename . '/1', lang('base_restore'), 'high'),
         anchor_cancel('/app/configuration_backup')
     );
 } else {
     $buttons = array(
-        form_submit_custom('upload', lang('base_upload'), 'high')
+        form_submit_custom('upload', lang('configuration_backup_upload'), 'high'),
     );
+    if ($show_cancel)
+        $buttons[] = anchor_cancel('/app/configuration_backup');
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -56,7 +71,7 @@ if ($restore_ready) {
 ///////////////////////////////////////////////////////////////////////////////
 
 echo form_open_multipart('configuration_backup/restore');
-echo form_header(lang('configuration_backup_restore_from_archive'));
+echo form_header(lang('configuration_backup_restore_from_archive'), array('id' => 'upload_form'));
 
 echo field_file('restore_file', $filename, lang('configuration_backup_restore_file'), $restore_ready);
 

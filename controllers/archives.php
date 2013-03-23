@@ -103,7 +103,7 @@ class Archives extends ClearOS_Controller
     function restore($filename)
     {
         $this->lang->load('configuration_backup');
-        $confirm_uri = '/app/configuration_backup/archive_restore/' . $filename;
+        $confirm_uri = '/app/configuration_backup/start_restore/' . $filename;
         $cancel_uri = '/app/configuration_backup';
         $items = array($filename);
 

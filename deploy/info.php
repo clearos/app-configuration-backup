@@ -5,7 +5,7 @@
 /////////////////////////////////////////////////////////////////////////////
 
 $app['basename'] = 'configuration_backup';
-$app['version'] = '1.4.20';
+$app['version'] = '1.4.21';
 $app['release'] = '1';
 $app['vendor'] = 'ClearFoundation';
 $app['packager'] = 'ClearFoundation';
@@ -39,7 +39,14 @@ $app['core_requires'] = array(
 
 $app['core_file_manifest'] = array(
     'app-configuration-backup.cron' => array('target' => '/etc/cron.d/app-configuration-backup'),
+    'configuration-restore' => array(
+        'target' => '/usr/sbin/configuration-restore',
+        'mode' => '0755',
+        'owner' => 'root',
+        'group' => 'root',
+    )
 );
+
 
 $app['core_directory_manifest'] = array(
    '/var/clearos/configuration_backup' => array(),

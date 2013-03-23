@@ -1,13 +1,13 @@
 <?php
 
 /**
- * Configuration backup and restore class.
+ * Configuration backup/restore class.
  *
  * @category   Apps
  * @package    Configuration_Backup
  * @subpackage Libraries
  * @author     ClearFoundation <developer@clearfoundation.com>
- * @copyright  2003-2013 ClearFoundation
+ * @copyright  2003-2011 ClearFoundation
  * @license    http://www.gnu.org/copyleft/lgpl.html GNU Lesser General Public License version 3 or later
  * @link       http://www.clearfoundation.com/docs/developer/apps/configuration_backup/
  */
@@ -96,7 +96,7 @@ clearos_load_library('base/Validation_Exception');
  * @package    Configuration_Backup
  * @subpackage Libraries
  * @author     ClearFoundation <developer@clearfoundation.com>
- * @copyright  2003-2013 ClearFoundation
+ * @copyright  2003-2011 ClearFoundation
  * @license    http://www.gnu.org/copyleft/lgpl.html GNU Lesser General Public License version 3 or later
  * @link       http://www.clearfoundation.com/docs/developer/apps/configuration_backup/
  */
@@ -108,17 +108,21 @@ class Configuration_Backup extends Engine
     ///////////////////////////////////////////////////////////////////////////////
 
     const FILE_CONFIG = 'backup.conf';
+    const FILE_STATUS = 'configuration_backup.json';
+    const FILE_INSTALLED_APPS = 'installed_apps.txt';
     const FOLDER_BACKUP = '/var/clearos/configuration_backup';
     const FOLDER_UPLOAD = '/var/clearos/configuration_backup/upload';
     const FOLDER_RESTORE = '/var/clearos/configuration_backup/restore';
     const CMD_TAR = '/bin/tar';
+    const CMD_RPM = '/bin/rpm';
     const CMD_LS = '/bin/ls';
+    const CMD_RESTORE = '/usr/sbin/configuration-restore';
+    const CMD_PS = '/bin/ps';
 
     const FILE_LIMIT = 10; // Maximum number of archives to keep
     const SIZE_LIMIT = 51200; // Maximum size of all archives
 
     const RELEASE_MATCH = 'match';
-    const RELEASE_UPGRADE_52 = 'upgrade52';
 
     ///////////////////////////////////////////////////////////////////////////////
     // V A R I A B L E S
@@ -172,7 +176,8 @@ class Configuration_Backup extends Engine
 
         try {
             $hostname = new Hostname();
-            $prefix = $hostname->get_actual();
+            // Codeigniter upload doesn't behave as nice with dots in filename
+            $prefix = preg_replace('/\./', '_', $hostname->get_actual());
             $prefix .= "-";
         } catch (Exception $ignore) {
             // No prefix...no fatal
@@ -188,6 +193,13 @@ class Configuration_Backup extends Engine
 
         if (!$folder->exists())
             $folder->create("root", "root", 700);
+
+        // Dump the app RPM list
+        //----------------------
+        $shell = new Shell();
+        $args = "-qa --queryformat='%{NAME}\n' | grep ^app- | sort > " .
+            CLEAROS_TEMP_DIR . "/" . self::FILE_INSTALLED_APPS;
+        $shell->execute(self::CMD_RPM, $args);
 
         // Dump the current LDAP database
         //-------------------------------
@@ -268,11 +280,9 @@ class Configuration_Backup extends Engine
 
         if ($current_version == $archive_version) {
             return self::RELEASE_MATCH;
-        } else if (preg_match('/release 5.2/', $archive_version)) {
-            return self::RELEASE_UPGRADE_52;
         } else {
             $error = lang('configuration_backup_release_mismatch') . ' (' . $archive_version . ')';
-            throw new Engine_Exception($err, CLEAROS_ERROR);
+            throw new Engine_Exception($error, CLEAROS_ERROR);
         }
     }
 
@@ -328,7 +338,7 @@ class Configuration_Backup extends Engine
     }
 
     /**
-     * Returns full path name for download.
+     * Returns full path name.
      *
      * @param string $filename filename
      *
@@ -434,42 +444,78 @@ class Configuration_Backup extends Engine
     /**
      * Performs a restore of the system configuration files from an archive backup.
      *
-     * @param string $archive filename of the archive to restore
+     * @param string  $archive filename of the archive to restore
+     * @param boolean $upload  boolean denoting use upload file path
      *
      * @return void
      * @throws Engine_Exception, Validation_Exception
      */
 
-    function restore_by_archive($archive)
+    function restore($archive, $upload = FALSE)
     {
         clearos_profile(__METHOD__, __LINE__);
 
-        Validation_Exception::is_valid($this->validate_filename($archive));
+        $filename = self::FOLDER_BACKUP . '/' .$archive;
 
-        $this->_restore(self::FOLDER_BACKUP, $archive);
+        if ($upload)
+            $filename = self::FOLDER_UPLOAD . '/' .$archive;
+
+        try {
+            $options = array(
+                'background' => TRUE
+            );
+
+            $shell = new Shell();
+            $shell->execute(self::CMD_RESTORE, "-f=" . $filename, TRUE, $options);
+
+        } catch (Exception $e) {
+            throw new Engine_Exception(
+                lang('configuration_backup_unable_to_start_restore') . ": " . clearos_exception_message($e),
+                CLEAROS_WARNING
+            );
+        }
     }
 
     /**
-     * Performs a restore of the system configuration files by uploading backup.
+     * Returns boolean indicating whether restore is currently running.
      *
-     * @param string $archive filename of the upload to restore
-     *
-     * @return void
-     * @throws Engine_Exception, Validation_Exception
+     * @return boolean
+     * @throws Engine_Exception
      */
 
-    function restore_by_upload($archive)
+    function is_restore_in_progress()
     {
         clearos_profile(__METHOD__, __LINE__);
 
-        Validation_Exception::is_valid($this->validate_filename($archive));
-
-        $this->_restore(self::FOLDER_UPLOAD, $archive);
-        $this->purge();
+        try {
+            $shell = new Shell();
+            $exe = pathinfo(self::CMD_RESTORE, PATHINFO_FILENAME);
+            $exitcode = $shell->execute(self::CMD_PS, " afx | grep $exe 2>&1 & echo $!", FALSE);
+            if ($exitcode != 0)
+                throw new Engine_Exception(
+                    lang('configuration_backup_unable_to_determine_running_state'),
+                    CLEAROS_WARNING
+                );
+            $rows = $shell->get_output();
+            $pid = -1;
+            foreach ($rows as $row) {
+                if (preg_match('/^([0-9]+)$/', $row, $match)) {
+                    $pid = trim($match[1]);
+                    continue;
+                }
+                if (preg_match('/^\s*([0-9]+)\s+.*' . $exe . '.*$/', $row, $match)) {
+                    if ((intval($match[1]) + 4) < $pid || $match[1] > $pid)
+                        return TRUE;
+                }
+            }
+            return FALSE;
+        } catch (Exception $e) {
+            throw new Engine_Exception(lang('configuration_backup_unable_to_determine_running_state'), CLEAROS_WARNING);
+        }
     }
 
     /**
-     * Deletes backup file.
+     * Resets (deletes) the backup file.
      *
      * @param string $filename filename
      *
@@ -489,7 +535,7 @@ class Configuration_Backup extends Engine
     }
 
     /**
-     * Returns the size of a backup file.
+     * Fetches the size of a backup file.
      *
      * @param string $filename filename
      *
@@ -509,25 +555,52 @@ class Configuration_Backup extends Engine
     }
 
     /**
-     * Put the backup file in the cache directory, ready for import begin.
+     * Returns JSON-encoded data indicating status of restore operation.
      *
-     * @param string $filename filename
-     *
-     * @filename string backup filename
-     * @return void
-     * @throws Engine_Exception, File_Not_Found_Exception
+     * @return string
+     * @throws Engine_Exception
      */
 
-    function set_backup_file($filename)
+    function get_restore_status()
     {
         clearos_profile(__METHOD__, __LINE__);
 
-        $file = new File(CLEAROS_TEMP_DIR . '/' . $filename, TRUE);
+        try {
+            $file = new File(CLEAROS_TEMP_DIR . "/" . self::FILE_STATUS, FALSE);
+            $status = array();
+            if (!$file->exists()) {
+                $status['code'] = 0;
+                $status['timestamp'] = time();
+                $status['progress'] = 0;
+                $status['msg'] = 'not_running';
+                return $status;
+            }
 
-        // Move uploaded file to cache
-        $file->move_to(self::FOLDER_UPLOAD . '/' . $filename);
-        $file->chown('root', 'root'); 
-        $file->chmod(600);
+            $lines = $file->get_contents_as_array();
+
+            if (empty($lines))
+                throw new Engine_Exception(lang('configuration_backup_no_data'));
+
+            return json_decode(end($lines));
+        } catch (Exception $e) {
+            throw new Engine_Exception(clearos_exception_message($e));
+        }
+    }
+
+    /**
+     * Reset status.
+     *
+     * @return void
+     * @throws Engine_Exception
+     */
+
+    function reset_restore_status()
+    {
+        clearos_profile(__METHOD__, __LINE__);
+
+        $file = new File(CLEAROS_TEMP_DIR . "/" . self::FILE_STATUS);
+        if ($file->exists())
+            $file->delete();
     }
 
     ///////////////////////////////////////////////////////////////////////////////
@@ -542,11 +615,11 @@ class Configuration_Backup extends Engine
      * @return string error message if filename is invalid
      */
 
-    function validate_filename($filename)
+    public function validate_filename($filename)
     {
         clearos_profile(__METHOD__, __LINE__);
 
-        if (! preg_match('/^backup-[0-9a-zA-Z\.\-_]+$/', $filename))
+        if (! preg_match('/^backup-[0-9a-zA-Z\.\-_]+\.tgz$/', $filename))
             return lang('configuration_backup_backup_file_invalid');
     }
 
@@ -564,7 +637,7 @@ class Configuration_Backup extends Engine
      * @throws Engine_Exception
      */
 
-    protected function _get_list($path)
+    private function _get_list($path)
     {
         clearos_profile(__METHOD__, __LINE__);
 
@@ -598,7 +671,7 @@ class Configuration_Backup extends Engine
      * @throws Engine_Exception
      */
 
-    protected function _read_config()
+    private function _read_config()
     {
         clearos_profile(__METHOD__, __LINE__);
 
@@ -619,206 +692,24 @@ class Configuration_Backup extends Engine
     }
 
     /**
-     * Performs a restore for the given backup.
+     * Put the backup file in the cache directory, ready for import begin.
      *
-     * @param string $path    path of the archive
-     * @param string $archive filename of the archive to restore
+     * @param string $filename filename
      *
-     * @access private
-     *
+     * @filename string backup filename
      * @return void
-     * @throws Engine_Exception, Validation_Exception
+     * @throws Engine_Exception, File_Not_Found_Exception
      */
 
-    protected function _restore($path, $archive)
+    function set_backup_file($filename)
     {
         clearos_profile(__METHOD__, __LINE__);
 
-        $full_path = $path . '/' . $archive;
+        $file = new File(CLEAROS_TEMP_DIR . '/' . $filename, TRUE);
 
-        $version_state = $this->check_archive_version($full_path);
-
-        $file = new File($full_path);
-
-        if (! $file->exists())
-            throw new File_Not_Found_Exception(CLEAROS_ERROR);
-
-        // Perform restore
-        //----------------
-
-        if ($version_state == self::RELEASE_MATCH)
-            $this->_restore_all($full_path);
-        else if ($version_state == self::RELEASE_UPGRADE_52)
-            $this->_restore_52($full_path);
-    }
-
-    /**
-     * Performs a full restore.
-     *
-     * @param string $full_path full path of configuration archive
-     *
-     * @return void
-     * @throws Engine_Exception
-     */
-
-    protected function _restore_all($full_path)
-    {
-        clearos_profile(__METHOD__, __LINE__);
-
-        // Unpack tar.gz
-        //--------------
-
-        $shell = new Shell();
-        $shell->execute(self::CMD_TAR, '-C / -xpzf ' . $full_path, TRUE);
-
-        // Reload the LDAP database
-        //-------------------------
-
-        if (clearos_library_installed('openldap/LDAP_Driver')) {
-            clearos_load_library('openldap/LDAP_Driver');
-
-            $openldap = new LDAP_Driver();
-            $openldap->import();
-        }
-    }
-
-    /**
-     * Performs a restore for version 5.2.
-     *
-     * @param string $full_path full path of configuration archive
-     *
-     * @return void
-     * @throws Engine_Exception
-     */
-
-    protected function _restore_52($full_path)
-    {
-        clearos_profile(__METHOD__, __LINE__);
-
-        // Unpack tar.gz
-        //--------------
-
-        $folder = new Folder(self::FOLDER_RESTORE);
-
-        if ($folder->exists())
-            $folder->delete(TRUE);
-
-        $folder->create('root', 'root', '0755');
-
-        $shell = new Shell();
-        $shell->execute(self::CMD_TAR, '-C ' . self::FOLDER_RESTORE . ' -xpzf ' . $full_path, TRUE);
-
-        // Prepare LDAP import
-        //--------------------
-        // TODO: the openldap->import() should have the filename as the first parameter
-
-        if (!clearos_library_installed('openldap_directory/OpenLDAP'))
-            return;
-
-        clearos_load_library('openldap/LDAP_Driver');
-        clearos_load_library('openldap_directory/OpenLDAP');
-
-        $openldap = new \clearos\apps\openldap_directory\OpenLDAP();
-        $ldap_driver = new \clearos\apps\openldap\LDAP_Driver();
-
-        // Grab domain and LDAP password for import
-        //-----------------------------------------
-
-        $file = new File(self::FOLDER_RESTORE . '/etc/kolab/kolab.conf');
-        $lines = $file->get_contents_as_array();
-        
-        $domain = '';
-        $ldap_password = '';
-
-        foreach ($lines as $line) {
-            $matches = array();
-
-            if (preg_match('/^base_dn\s*:\s*(.*)/', $line, $matches)) {
-                $domain = preg_replace('/,dc=/', '.', $matches[1]);
-                $domain = preg_replace('/^dc=/', '', $domain);
-            }
-
-            $matches = array();
-
-            if (preg_match('/^bind_pw\s*:\s*(.*)/', $line, $matches))
-                $ldap_password = $matches[1];
-        }
-
-        // Set mode
-        //---------
-
-        $sysmode = Mode_Factory::create();
-        $mode = $sysmode->set_mode(Mode_Engine::MODE_MASTER);
-
-        // Intialize the underlying LDAP system
-        //-------------------------------------
-
-        if (empty($domain) || empty($ldap_password))
-            throw new Engine_Exception(lang('configuration_backup_could_not_convert_directory'));
-
-        $ldap_driver->initialize_master($domain, $ldap_password, TRUE);
-
-        // Prep Samba domain SID
-        //----------------------
-
-        // TODO: move this to samba->initialize(sid);
-        if (clearos_library_installed('samba/Samba')) {
-            $file = new File(self::FOLDER_RESTORE . '/etc/samba/domainsid');
-            $file->copy_to('/etc/samba/domainsid');
-
-            $file = new File(self::FOLDER_RESTORE . '/etc/samba/domainsid');
-            $file->copy_to('/etc/samba/localid');
-        }
-
-        // Initialize the accounts LDAP layer
-        //-----------------------------------
-
-        $openldap->initialize($domain, TRUE);
-
-        // Initialize Samba
-        //-----------------
-
-        if (clearos_library_installed('samba/Samba')) {
-            clearos_load_library('samba/Samba'); 
-
-            $samba = new \clearos\apps\samba\Samba();
-            $samba->initialize();
-        }
-
-        // Import the old LDIF
-        //--------------------
-
-        $file = new File(self::FOLDER_RESTORE . '/etc/openldap/backup.ldif');
-
-        $lines = $file->get_contents_as_array();
-        $import_ldif = '';
-        $in_record = FALSE;
-
-        $ignore_list = array('createTimestamp', 'creatorsName', 'entryCSN', 'entryUUID', 'modifiersName', 'modifyTimestamp');
-
-        foreach ($lines as $line) {
-            if (preg_match('/^dn: .*ou=(Groups|Users),ou=Accounts/', $line)) {
-                $in_record = TRUE;
-            } else if ($in_record && preg_match('/^\s*$/', $line)) {
-                $import_ldif .= "\n";
-                $in_record = FALSE;
-            }
-
-            if ($in_record) {
-                $key = preg_replace('/: .*/', '', $line);
-                
-                if (! in_array($key, $ignore_list))
-                    $import_ldif .= $line . "\n";
-            }
-        }
-
-        $file = new File('/var/clearos/openldap/snapshot.ldif'); // Remove hard code - see previous comment.
-        $file->add_lines($import_ldif);
-
-        // FIXME: to be continued
-        // $ldap_driver->import();
-
-        // Convert LDAP entries
-        //---------------------
+        // Move uploaded file to cache
+        $file->move_to(self::FOLDER_UPLOAD . '/' . $filename);
+        $file->chown('root', 'root'); 
+        $file->chmod(600);
     }
 }

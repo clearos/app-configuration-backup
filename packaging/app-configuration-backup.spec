@@ -1,7 +1,7 @@
 
 Name: app-configuration-backup
 Epoch: 1
-Version: 1.4.20
+Version: 1.4.21
 Release: 1%{dist}
 Summary: Configuration Backup
 License: GPLv3
@@ -12,10 +12,10 @@ Requires: %{name}-core = 1:%{version}-%{release}
 Requires: app-base
 
 %description
-The Configuration Backup app allows an administrator to take a snapshot of all configuration settings which can later be used to perform a restore.
+The configuration backup and restore app allows an administrator to take a snapshot (archive file) of all configuration settings of the system, allowing easy restoration in the event data is lost.
 
 %package core
-Summary: Configuration Backup - Core
+Summary: Configuration Backup - APIs and install
 License: LGPLv3
 Group: ClearOS/Libraries
 Requires: app-base-core
@@ -24,7 +24,7 @@ Requires: app-network-core
 Requires: app-tasks-core
 
 %description core
-The Configuration Backup app allows an administrator to take a snapshot of all configuration settings which can later be used to perform a restore.
+The configuration backup and restore app allows an administrator to take a snapshot (archive file) of all configuration settings of the system, allowing easy restoration in the event data is lost.
 
 This package provides the core API and libraries.
 
@@ -39,6 +39,7 @@ cp -r * %{buildroot}/usr/clearos/apps/configuration_backup/
 install -d -m 0755 %{buildroot}/var/clearos/configuration_backup
 install -d -m 775 %{buildroot}/var/clearos/configuration_backup/upload
 install -D -m 0644 packaging/app-configuration-backup.cron %{buildroot}/etc/cron.d/app-configuration-backup
+install -D -m 0755 packaging/configuration-restore %{buildroot}/usr/sbin/configuration-restore
 
 %post
 logger -p local6.notice -t installer 'app-configuration-backup - installing'
@@ -84,3 +85,4 @@ exit 0
 /usr/clearos/apps/configuration_backup/language
 /usr/clearos/apps/configuration_backup/libraries
 /etc/cron.d/app-configuration-backup
+/usr/sbin/configuration-restore
