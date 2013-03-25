@@ -61,17 +61,6 @@ function get_status() {
             if (data.code < 0) {
                 table_logs.fnClearTable();
             } else {
-//                    $('.ui-buttonset :input').attr('disabled', false);
-//                    $('.ui-buttonset :input').removeClass('ui-state-disabled');
-//                    $('.ui-buttonset [href]').removeClass('ui-state-disabled');
-//                    $('#configuration_backup_info_box').hide();
-//                    $('.ui-buttonset :input').attr('disabled', true);
-//                    $('#configuration_backup_info_box').show();
-//                    $('#configuration_backup_details').html(data.status);
-//                    $('.ui-buttonset :input').addClass('ui-state-disabled');
-//                    $('.ui-buttonset [href]').addClass('ui-state-disabled');
-//                    if (data.progress == 100)
-//                        $('#configuration_backup_details').removeClass('theme-loading-normal');
                 // Logs
                 if (data.logs != undefined && data.logs != null && $('#logs').length > 0) {
                     table_logs.fnClearTable();

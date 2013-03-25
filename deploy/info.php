@@ -5,7 +5,7 @@
 /////////////////////////////////////////////////////////////////////////////
 
 $app['basename'] = 'configuration_backup';
-$app['version'] = '1.4.21';
+$app['version'] = '1.4.22';
 $app['release'] = '1';
 $app['vendor'] = 'ClearFoundation';
 $app['packager'] = 'ClearFoundation';
@@ -32,7 +32,7 @@ $app['controllers']['configuration_backup']['title'] = $app['name'];
 /////////////////////////////////////////////////////////////////////////////
 
 $app['core_requires'] = array(
-    'app-base-core >= 1:1.4.15',
+    'app-base-core >= 1:1.4.23',
     'app-network-core',
     'app-tasks-core'
 );

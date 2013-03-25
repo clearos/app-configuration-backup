@@ -40,15 +40,11 @@ $this->lang->load('configuration_backup');
 // Buttons
 ///////////////////////////////////////////////////////////////////////////////
 
-if ($in_progress) {
-    $buttons = NULL;
-} else {
-    $buttons = array(
-        anchor_custom(
-            '/app/configuration_backup/logs/clear', lang('configuration_backup_clear'), 'high'
-        )
-    );
-}
+$buttons = array(
+    anchor_custom(
+        '/app/configuration_backup/logs/clear', lang('configuration_backup_clear'), 'high'
+    )
+);
 
 ///////////////////////////////////////////////////////////////////////////////
 // Headers

@@ -200,13 +200,15 @@ function restore($filename)
         $list = $file->get_contents_as_array();
         $yum = new Yum();
         $counter = 0;
-        if ($yum->is_busy()) {
+        while ($yum->is_busy()) {
             $counter++;
-            if ($counter > 120)
+            // Wait two minutes
+            if ($counter > 20)
                 throw new Exception (lang('configuration_backup_yum_busy'));
-                
+            update_status(0, 35, lang('configuration_backup_waiting_for_yum'));
+            sleep(6);
         }
-        $yum->install($list);
+        $yum->install($list, FALSE);
 
         // Give some time for yum to start and dump something to log file
         sleep(3);
@@ -214,9 +216,12 @@ function restore($filename)
             $logs = $yum->get_logs();
             if (is_array($logs) && !empty($logs)) {
                 $log = json_decode(end($logs));
-                update_status(0, 40, $log->details);
+                if ($log->code == 0)
+                    update_status(0, 40, $log->details);
+                else
+                    update_status($log->code, 40, $log->errmsg);
             }
-            if (!$yum->is_wc_busy)
+            if (!$yum->is_wc_busy())
                 break;
             sleep(1);
         }
@@ -302,13 +307,16 @@ function update_status($code, $progress, $msg)
         echo $msg . "\n";
     } else {
         $file = new File(CLEAROS_TEMP_DIR . "/" . Configuration_Backup::FILE_STATUS, FALSE);
+	// 5 is Initialization progress
+        if ($file->exists() && $progress == 5)
+            $file->delete();
         if (!$file->exists())
             $file->create('webconfig','webconfig', 644);
         $lines = $file->get_contents_as_array();
         if (!empty($lines)) {
             $last_log = json_decode(end($lines));
             if ($last_log->msg == $msg)
-                continue;
+                return;
         }
         $info = array (
         'code' => $code,
