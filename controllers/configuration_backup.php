@@ -172,6 +172,7 @@ class Configuration_Backup extends ClearOS_Controller
 
         try {
             $this->configuration_backup->restore($filename, $upload);
+            sleep(3);
             redirect('/configuration_backup/index/start');
         } catch (Exception $e) {
             $this->page->view_exception($e);
