@@ -36,10 +36,12 @@ echo "
 
 $(document).ready(function() {
 
-    // CSS hack...Multipart form screw up width
+    // FIXME: CSS hack...Multipart form screw up width
     $('#upload_form').css('width', '100%');
 
-    get_status();
+    if ($('#logs').length != 0)
+        get_status();
+
     $('.ui-buttonset [href]').click(function (e) {
          if ($(this).hasClass('ui-state-disabled'))
              return false;

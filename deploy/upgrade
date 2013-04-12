@@ -5,3 +5,7 @@
 
 /usr/sbin/addsudo /bin/tar app-configuration-backup
 /usr/sbin/addsudo /usr/sbin/configuration-restore app-configuration-backup
+
+# FIXME: remove any time after 6.4.0 release
+chmod 777 /var/clearos/framework/tmp ; chmod +t /var/clearos/framework/tmp
+

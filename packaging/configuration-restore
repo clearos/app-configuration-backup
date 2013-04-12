@@ -196,7 +196,7 @@ function restore($filename)
     //-------------------------
     try {
         update_status(0, 30, lang('configuration_backup_download_and_intstall_apps'));
-        $file = new File(CLEAROS_TEMP_DIR . '/' . Configuration_Backup::FILE_INSTALLED_APPS);
+        $file = new File(Configuration_Backup::FILE_INSTALLED_APPS);
         $list = $file->get_contents_as_array();
         $yum = new Yum();
         $counter = 0;
@@ -252,6 +252,7 @@ function restore($filename)
     $exclude_daemons = array(
         'auditd',
         'blk-availability',
+        'cloud-init',
         'clearsyncd',
         'haldaemon',
         'lvm2',

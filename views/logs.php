@@ -59,6 +59,12 @@ $headers = array(
 // List table
 ///////////////////////////////////////////////////////////////////////////////
 
+$options['default_rows'] = 50;
+$options['id'] = 'logs';
+$options['paginate'] = 'TRUE';
+$options['sort'] = FALSE;
+$options['no_action'] = TRUE;
+
 echo form_open('configuration_backup');
 
 echo summary_table(
@@ -66,7 +72,7 @@ echo summary_table(
     $buttons,
     $headers,
     NULL,
-    array('id' => 'logs', 'sort' => FALSE, 'paginate' => TRUE, 'no_action' => TRUE)
+    $options
 );
 
 echo form_close();

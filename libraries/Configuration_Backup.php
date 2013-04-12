@@ -109,7 +109,7 @@ class Configuration_Backup extends Engine
 
     const FILE_CONFIG = 'backup.conf';
     const FILE_STATUS = 'configuration_backup.json';
-    const FILE_INSTALLED_APPS = 'installed_apps.txt';
+    const FILE_INSTALLED_APPS = '/var/clearos/configuration_backup/installed_apps.txt';
     const FOLDER_BACKUP = '/var/clearos/configuration_backup';
     const FOLDER_UPLOAD = '/var/clearos/configuration_backup/upload';
     const FOLDER_RESTORE = '/var/clearos/configuration_backup/restore';
@@ -196,9 +196,19 @@ class Configuration_Backup extends Engine
 
         // Dump the app RPM list
         //----------------------
+
         $shell = new Shell();
-        $args = "-qa --queryformat='%{NAME}\n' | grep ^app- | sort > " . CLEAROS_TEMP_DIR . "/" . self::FILE_INSTALLED_APPS;
-        $shell->execute(self::CMD_RPM, $args);
+        $args = "-qa --queryformat='%{NAME}\n' | grep ^app- | sort";
+        $shell->execute(self::CMD_RPM, $args, TRUE);
+        $output = $shell->get_output();
+
+        $file = new File(self::FILE_INSTALLED_APPS);
+
+        if ($file->exists())
+            $file->delete();
+
+        $file->create('root', 'root', '0644');
+        $file->add_lines(implode($output, "\n") . "\n");
 
         // Dump the current LDAP database
         //-------------------------------
