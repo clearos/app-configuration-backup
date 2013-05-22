@@ -3,9 +3,9 @@
 /**
  * Configuration Backup/Restore controller.
  *
- * @category   Apps
- * @package    Configuration_Backup
- * @subpackage Controllers
+ * @category   apps
+ * @package    configuration-backup
+ * @subpackage controllers
  * @author     ClearFoundation <developer@clearfoundation.com>
  * @copyright  2011 ClearFoundation
  * @license    http://www.gnu.org/copyleft/gpl.html GNU General Public License version 3 or later
@@ -42,9 +42,9 @@ use \clearos\apps\configuration_backup\Configuration_Backup as Backup;
 /**
  * Configuration Backup and Restore controller.
  *
- * @category   Apps
- * @package    Configuration_Backup
- * @subpackage Controllers
+ * @category   apps
+ * @package    configuration-backup
+ * @subpackage controllers
  * @author     ClearFoundation <developer@clearfoundation.com>
  * @copyright  2011 ClearFoundation
  * @license    http://www.gnu.org/copyleft/gpl.html GNU General Public License version 3 or later

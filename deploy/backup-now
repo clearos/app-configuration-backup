@@ -6,9 +6,9 @@
  *
  * Performs a configuration backup.
  *
- * @category   ClearOS
- * @package    Configuration_Backup
- * @subpackage Scripts
+ * @category   apps
+ * @package    configuration-backup
+ * @subpackage scripts
  * @author     ClearFoundation <developer@clearfoundation.com>
  * @copyright  2013 ClearFoundation
  * @license    http://www.gnu.org/copyleft/lgpl.html GNU Lesser General Public License version 3 or later

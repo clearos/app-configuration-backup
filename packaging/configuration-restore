@@ -4,9 +4,9 @@
 /**
  * ClearOS Configuration Restore script.
  *
- * @category   Apps
- * @package    Configuration_Backup
- * @subpackage Scripts
+ * @category   apps
+ * @package    configuration-backup
+ * @subpackage scripts
  * @author     ClearFoundation <developer@clearfoundation.com>
  * @copyright  2008-2011 ClearFoundation
  * @license    http://www.gnu.org/copyleft/gpl.html GNU General Public License version 3 or later

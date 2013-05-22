@@ -3,9 +3,9 @@
 /**
  * Javascript helper for Configuration_Backup.
  *
- * @category   Apps
- * @package    Configuration_Backup
- * @subpackage Javascript
+ * @category   apps
+ * @package    configuration-backup
+ * @subpackage javascript
  * @author     ClearCenter <developer@clearcenter.com>
  * @copyright  2011 ClearCenter
  * @license    http://www.clearcenter.com/app_license ClearCenter license
