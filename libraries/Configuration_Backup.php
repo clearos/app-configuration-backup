@@ -123,6 +123,7 @@ class Configuration_Backup extends Engine
     const SIZE_LIMIT = 51200; // Maximum size of all archives
 
     const RELEASE_MATCH = 'match';
+    const RELEASE_UPGRADE_52 = 'upgrade52';
 
     ///////////////////////////////////////////////////////////////////////////////
     // V A R I A B L E S
@@ -289,6 +290,8 @@ class Configuration_Backup extends Engine
 
         if ($current_version == $archive_version) {
             return self::RELEASE_MATCH;
+        } else if (preg_match('/release 5.2/', $archive_version)) {
+            return self::RELEASE_UPGRADE_52;
         } else {
             $error = lang('configuration_backup_release_mismatch') . ' (' . $archive_version . ')';
             throw new Engine_Exception($error, CLEAROS_ERROR);
@@ -464,10 +467,10 @@ class Configuration_Backup extends Engine
     {
         clearos_profile(__METHOD__, __LINE__);
 
-        $filename = self::FOLDER_BACKUP . '/' .$archive;
-
         if ($upload)
             $filename = self::FOLDER_UPLOAD . '/' .$archive;
+        else
+            $filename = self::FOLDER_BACKUP . '/' .$archive;
 
         try {
             $options = array(
@@ -481,6 +484,323 @@ class Configuration_Backup extends Engine
             throw new Engine_Exception(lang('configuration_backup_unable_to_start_restore') . ": " . clearos_exception_message($e), CLEAROS_WARNING);
         }
     }
+
+    /**
+     * Performs a restore for version 5.2.
+     *
+     * @param string $full_path full path of configuration archive
+     *
+     * @return void
+     * @throws Engine_Exception
+     */
+
+    function restore_52($full_path)
+    {
+        clearos_profile(__METHOD__, __LINE__);
+
+        // Unpack tar.gz
+        //--------------
+
+        $folder = new Folder(self::FOLDER_RESTORE);
+
+        if ($folder->exists())
+            $folder->delete(TRUE);
+
+        $folder->create('root', 'root', '0755');
+
+        $shell = new Shell();
+        $shell->execute(self::CMD_TAR, '-C ' . self::FOLDER_RESTORE . ' -xpzf ' . $full_path, TRUE);
+
+        // Prepare LDAP import
+        //--------------------
+        // TODO: the openldap->import() should have the filename as the first parameter
+
+        if (!clearos_library_installed('openldap_directory/OpenLDAP'))
+            return;
+
+        clearos_load_library('openldap/LDAP_Driver');
+        clearos_load_library('openldap_directory/OpenLDAP');
+
+        $openldap = new \clearos\apps\openldap_directory\OpenLDAP();
+        $ldap_driver = new \clearos\apps\openldap\LDAP_Driver();
+
+        // Grab domain and LDAP password for import
+        //-----------------------------------------
+
+        $file = new File(self::FOLDER_RESTORE . '/etc/kolab/kolab.conf');
+        $lines = $file->get_contents_as_array();
+        
+        $domain = '';
+        $ldap_password = '';
+
+        foreach ($lines as $line) {
+            $matches = array();
+
+            if (preg_match('/^base_dn\s*:\s*(.*)/', $line, $matches)) {
+                $domain = preg_replace('/,dc=/', '.', $matches[1]);
+                $domain = preg_replace('/^dc=/', '', $domain);
+            }
+
+            $matches = array();
+
+            if (preg_match('/^bind_pw\s*:\s*(.*)/', $line, $matches))
+                $ldap_password = $matches[1];
+        }
+
+        // Set mode
+        //---------
+
+        clearos_log('configuration-backup', 'setting mode');
+        $sysmode = Mode_Factory::create();
+        $mode = $sysmode->set_mode(Mode_Engine::MODE_STANDALONE);
+
+        // Prep Samba domain SID
+        //----------------------
+
+        // TODO: move this to samba->initialize(sid);
+        if (clearos_library_installed('samba_common/Samba')) {
+            clearos_log('configuration-backup', 'prepping Samba SID');
+
+            $file = new File(self::FOLDER_RESTORE . '/etc/samba/domainsid');
+            $file->copy_to('/etc/samba/domainsid');
+
+            $file = new File(self::FOLDER_RESTORE . '/etc/samba/domainsid');
+            $file->copy_to('/etc/samba/localid');
+
+            $file = new File(self::FOLDER_RESTORE . '/etc/samba/smb.conf');
+            $file->copy_to('/etc/samba/smb.conf');
+        }
+
+        // Intialize the underlying LDAP system
+        //-------------------------------------
+
+        if (empty($domain) || empty($ldap_password))
+            throw new Engine_Exception(lang('configuration_backup_could_not_convert_directory'));
+
+        clearos_log('configuration-backup', 'initializing base LDAP: ' . $domain);
+        $ldap_driver->initialize_standalone($domain, $ldap_password, TRUE);
+
+        // Initialize the accounts LDAP layer
+        //-----------------------------------
+
+        clearos_log('configuration-backup', 'initializing LDAP accounts');
+        $openldap->initialize($domain, TRUE);
+
+        // Initialize Samba
+        //-----------------
+
+        if (clearos_library_installed('samba/OpenLDAP_Driver') && clearos_library_installed('samba_common/Samba')) {
+            clearos_load_library('samba/OpenLDAP_Driver'); 
+            clearos_load_library('samba_common/Samba'); 
+
+            $samba = new \clearos\apps\samba_common\Samba();
+            $netbios = $samba->get_netbios_name();
+            $workgroup = $samba->get_workgroup();
+
+            clearos_log('configuration-backup', 'initializing Samba directory');
+            $samba_ldap = new \clearos\apps\samba\OpenLDAP_Driver();
+            $samba_ldap->initialize(TRUE, $workgroup);
+            $samba_ldap->update_group_mappings();
+
+            clearos_log('configuration-backup', 'initializing Samba local settings');
+            $samba_ldap->initialize_samba_as_master_or_standalone($netbios, $workgroup, '', TRUE);
+        }
+
+        // Remove customizable default groups, use the import data instead
+        //----------------------------------------------------------------
+
+        if (clearos_library_installed('openldap_directory/Group_Driver')) {
+            clearos_load_library('openldap_directory/Group_Driver');
+
+            $remove_groups = array('domain_users', 'allusers', 'domain_admins');
+
+            foreach ($remove_groups as $group_name) {
+                $group = new \clearos\apps\openldap_directory\Group_Driver($group_name);
+
+                if ($group->exists())
+                    $group->delete();
+            }
+        }
+
+        // Import the old LDIF
+        //--------------------
+
+        $file = new File(self::FOLDER_RESTORE . '/etc/openldap/backup.ldif');
+
+        $lines = $file->get_contents_as_array();
+        $lines[] = "\n"; // Make sure there's an empty line at the end
+
+        $ignore_objects_list = array(
+            'cn=Windows Administrator',
+            'cn=No Members',
+            'cn=Flexshare System',
+            'cn=Email Archive',
+            'cn=Guest Account',
+            'cn=Master',
+            'k=kolab',
+            'cn=manager',
+            'cn=nobody',
+            'cn=calendar',
+            'cn=guests',
+            'cn=domain_guests',
+            'cn=domain_computers',
+            'cn=administrators',
+            'cn=users',
+            'cn=power_users',
+            'cn=account_operators',
+            'cn=server_operators',
+            'cn=print_operators',
+            'cn=backup_operators',
+        );
+
+        $ignore_attributes_list = array(
+            'createTimestamp',
+            'creatorsName',
+            'entryCSN',
+            'entryUUID',
+            'modifiersName',
+            'modifyTimestamp',
+            'kolabHomeServer',
+            'kolabInvitationPolicy',
+            'pcnMicrosoftLanmanPassword',
+            'pcnWebconfigFlag',
+            'pcnFTPPassword',
+            'pcnMailPassword',
+            'pcnGoogleAppsPassword',
+            'pcnOpenVPNPassword',
+            'pcnPPTPPassword',
+            'pcnProxyPassword',
+            'pcnWebconfigPassword',
+            'pcnWebPassword',
+            'objectClass: kolabInetOrgPerson',
+            'objectClass: hordePerson',
+            'objectClass: pcnWebconfigAccount',
+            'objectClass: pcnProxyAccount',
+            'objectClass: pcnOpenVPNAccount',
+            'objectClass: pcnWebAccount',
+            'objectClass: pcnFTPAccount',
+            'objectClass: pcnMailAccount',
+            'objectClass: pcnGoogleAppsAccount',
+            'objectClass: pcnPPTPAccount',
+        );
+
+        $all_plugins = array();
+        $in_object = FALSE;
+        $import_ldif = '';
+
+        foreach ($lines as $line) {
+            if (preg_match('/^dn:/', $line)) {
+                $object_dn = $line;
+                $object_base = preg_replace('/^dn:\s*/', '', $line);
+                $object_base = preg_replace('/,.*/', '', $object_base);
+
+                if (! in_array($object_base, $ignore_objects_list)) {
+                    $in_object = TRUE;
+                    $is_a_keeper = FALSE;
+                    $object_data = '';
+                    $object_uid = '';
+                    $object_cn = '';
+                    $object_plugins = array();
+                }
+            } else if ($in_object && preg_match('/^\s*$/', $line)) {
+                if ($is_a_keeper) {
+                    $object_log_id = empty($object_uid) ? "common name - $object_cn" : "username - $object_uid";
+                    clearos_log('configuration-backup', 'converting 5.x object: ' . $object_log_id);
+
+                    $import_ldif .= $object_data . "\n";
+
+                    foreach ($object_plugins as $plugin)
+                        $all_plugins[$plugin][] = $object_uid;
+                } else {
+                    clearos_log('configuration-backup', 'skipping 5.x object: ' . $object_dn);
+                }
+
+                $in_object = FALSE;
+                $is_a_keeper = FALSE;
+                $object_data = '';
+                $object_uid = '';
+                $object_cn = '';
+                $object_plugins = array();
+            }
+
+            if ($in_object) {
+                $key = preg_replace('/: .*/', '', $line);
+
+                if (preg_match('/^cn:/', $line))
+                    $object_cn = preg_replace('/^cn:\s*/', '', $line);
+
+                // Skip unwanted attributtes
+                if (in_array($key, $ignore_attributes_list) || in_array(trim($line), $ignore_attributes_list)) {
+                    continue;
+
+                // Conivert flags to policies
+                } else if (preg_match('/^pcnProxyFlag: TRUE/', $line)) {
+                    $object_plugins[] = 'web_proxy';
+                } else if (preg_match('/^pcnOpenVPNFlag: TRUE/', $line)) {
+                    $object_plugins[] = 'openvpn';
+                    $object_plugins[] = 'user_certificates';
+                } else if (preg_match('/^pcnPPTPFlag: TRUE/', $line)) {
+                    $object_plugins[] = 'pptpd';
+                } else if (preg_match('/^pcnFTPFlag: TRUE/', $line)) {
+                    $object_plugins[] = 'ftp';
+                } else if (preg_match('/^pcnMailFlag: TRUE/', $line)) {
+                    $object_plugins[] = 'smtp';
+                } else if (preg_match('/^pcn.*Flag:/', $line)) {
+                    continue;
+
+                // Dump the rest of the attributes
+                } else {
+                    // Convert some 1-to-1 attributes
+                    $line = preg_replace('/^pcnSHAPassword:/', 'clearSHAPassword:', $line);
+                    $line = preg_replace('/^pcnMicrosoftNTPassword:/', 'clearMicrosoftNTPassword:', $line);
+                    $line = preg_replace('/^objectClass: pcnAccount/', "objectClass: clearAccount\nobjectClass: clearContactAccount\nclearAccountStatus: enabled", $line);
+
+                    // uid: captures users and computers
+                    // gidNumber captures groups 
+                    if (preg_match('/^uid:/', $line)) {
+                        $object_uid = preg_replace('/^uid:\s*/', '', $line);
+                        $is_a_keeper = TRUE;
+                    } else if (preg_match('/^gidNumber:/', $line)) {
+                        $is_a_keeper = TRUE;
+                    }
+
+                    $object_data .= $line . "\n";
+                }
+            }
+        }
+
+        // Import the new LDIF file
+        //-------------------------
+
+        $import_filename = self::FOLDER_RESTORE . '/etc/openldap/clear5x.ldif';
+        $file = new File($import_filename);
+
+        if ($file->exists())
+            $file->delete();
+
+        $file->create('root', 'root', '0600');
+        $file->add_lines($import_ldif);
+
+        $ldap_driver->import_ldif($import_filename);
+
+        // Update the plugin groups
+        //-------------------------
+
+        if (clearos_library_installed('openldap_directory/Group_Driver')) {
+            clearos_load_library('openldap_directory/Group_Driver');
+
+            foreach ($all_plugins as $group_name => $members) {
+    
+                $group = new \clearos\apps\openldap_directory\Group_Driver($group_name . '_plugin');
+
+                if ($group->exists())
+                    $group->set_members($members);
+            }
+        }
+
+        // FIXME - preserve Master object
+    }
+
 
     /**
      * Returns boolean indicating whether restore is currently running.
