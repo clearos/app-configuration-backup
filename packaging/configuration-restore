@@ -327,6 +327,8 @@ function update_status($code, $progress, $msg)
         );
         $file->add_lines(json_encode($info) . "\n"); 
     }
+
+    clearos_log('configuration-backup', $msg);
 }
 
 // vim: syntax=php
