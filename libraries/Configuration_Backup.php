@@ -906,7 +906,9 @@ class Configuration_Backup extends Engine
             
             return $status;
         } catch (Exception $e) {
-            throw new Engine_Exception(clearos_exception_message($e));
+            return '...';
+            // TODO: this gets triggered on a timing issue.
+            // throw new Engine_Exception(clearos_exception_message($e));
         }
     }
 

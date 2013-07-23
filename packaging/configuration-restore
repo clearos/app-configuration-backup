@@ -56,24 +56,24 @@ use \clearos\apps\base\Daemon as Daemon;
 use \clearos\apps\base\File as File;
 use \clearos\apps\base\Shell as Shell;
 use \clearos\apps\base\Yum as Yum;
-use \clearos\apps\openldap\LDAP_Driver as LDAP_Driver;
 
 clearos_load_library('configuration_backup/Configuration_Backup');
 clearos_load_library('base/Daemon');
 clearos_load_library('base/File');
 clearos_load_library('base/Shell');
 clearos_load_library('base/Yum');
-clearos_load_library('openldap/LDAP_Driver');
 
 // Exceptions
 //-----------
 
 use \clearos\apps\base\Validation_Exception as Validation_Exception;
+use \clearos\apps\base\File_No_Match_Exception as File_No_Match_Exception;
 use \clearos\apps\base\File_Not_Found_Exception as File_Not_Found_Exception;
 use \clearos\apps\base\Engine_Exception as Engine_Exception;
 use \Exception as Exception;
 
 clearos_load_library('base/Validation_Exception');
+clearos_load_library('base/File_No_Match_Exception');
 clearos_load_library('base/File_Not_Found_Exception');
 clearos_load_library('base/Engine_Exception');
 
@@ -239,13 +239,47 @@ function restore($filename)
         clearos_load_library('openldap/LDAP_Driver');
 
         update_status(0, 60, lang('configuration_backup_importing_ldap'));
-        $openldap = new LDAP_Driver();
+        $openldap = new \clearos\apps\openldap\LDAP_Driver();
         $openldap->import();
         update_status(0, 70, lang('configuration_backup_restarting_service:') . ' slapd');
     }
 
+    // Fix PAM (tracker #1245) / TODO: remove in ClearOS 7
+    //------------------------
+
+    if (clearos_library_installed('accounts/Accounts_Configuration')) {
+        clearos_load_library('accounts/Accounts_Configuration');
+
+        $driver = '';
+
+        try {
+            $driver = \clearos\apps\accounts\Accounts_Configuration::get_driver();
+        } catch (Exception $e) {
+        }
+
+        if ($driver == 'openldap_directory') {
+            try {
+                $pam_file = new File('/etc/pam.d/system-auth-ac');
+                $pam_file->lookup_line('/pam_ldap/');
+                // PAM is okay
+            } catch (File_No_Match_Exception $e) {
+                clearos_log('configuration-backup', 'PAM cleanup');
+                $shell = new Shell();
+                $shell->execute(
+                    '/usr/sbin/authconfig', 
+                    '--enableshadow --passalgo=sha512 ' .
+                    '--enablecache --enablelocauthorize --enablemkhomedir ' .
+                    '--disablewinbind --disablewinbindauth ' .
+                    '--enableldap --enableldapauth --disablefingerprint --updateall',
+                    TRUE
+                );
+            }
+        }
+    }
+
     // Restart services
     //-----------------
+
     $shell = new Shell();
     $shell->execute('/sbin/chkconfig', '--list | grep "3:on"');
     $rows = $shell->get_output();
