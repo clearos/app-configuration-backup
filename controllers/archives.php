@@ -72,7 +72,7 @@ class Archives extends ClearOS_Controller
         // Load views
         //-----------
 
-        $this->page->view_form('archives', $data, lang('configuration_backup_configuration_backup'));
+        $this->page->view_form('archives', $data, lang('configuration_backup_archives'));
     }
 
     /**

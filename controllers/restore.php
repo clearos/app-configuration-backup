@@ -61,6 +61,7 @@ class Restore extends ClearOS_Controller
         $this->load->helper('number');
         $this->load->library('configuration_backup/Configuration_Backup');
         $this->lang->load('configuration_backup');
+        $this->lang->load('base');
 
         // Handle form submit
         //-------------------
@@ -92,6 +93,6 @@ class Restore extends ClearOS_Controller
         // Load views
         //-----------
 
-        $this->page->view_form('restore', $data, lang('configuration_backup_configuration_backup'));
+        $this->page->view_form('restore', $data, lang('base_restore'));
     }
 }

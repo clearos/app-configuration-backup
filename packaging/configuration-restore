@@ -205,7 +205,7 @@ function restore($filename)
             // Wait two minutes
             if ($counter > 20)
                 throw new Exception (lang('configuration_backup_yum_busy'));
-            update_status(0, 35, lang('configuration_backup_waiting_for_yum'));
+            update_status(0, 35, lang('configuration_backup_waiting_for_software_updates_system'));
             sleep(6);
         }
         $yum->install($list, FALSE);
@@ -241,7 +241,7 @@ function restore($filename)
         update_status(0, 60, lang('configuration_backup_importing_ldap'));
         $openldap = new LDAP_Driver();
         $openldap->import();
-        update_status(0, 70, lang('configuration_backup_restarting_daemon') . ": slapd");
+        update_status(0, 70, lang('configuration_backup_restarting_service:') . ' slapd');
     }
 
     // Restart services
@@ -273,7 +273,7 @@ function restore($filename)
             continue;
 
         $daemon = new Daemon($dname);
-        update_status(0, 80, lang('configuration_backup_restarting_daemon') . ": " . $dname);
+        update_status(0, 80, lang('configuration_backup_restarting_service:') . ' ' . $dname);
         try {
             $daemon->restart(FALSE);
         } catch (Engine_Exception $e) {

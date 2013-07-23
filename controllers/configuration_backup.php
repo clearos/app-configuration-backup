@@ -88,7 +88,7 @@ class Configuration_Backup extends ClearOS_Controller
                 $views[] = 'configuration_backup/logs';
         }
 
-        $this->page->view_forms($views, lang('configuration_backup_configuration_backup'));
+        $this->page->view_forms($views, lang('configuration_backup_app_name'));
     }
 
     /**

@@ -481,7 +481,7 @@ class Configuration_Backup extends Engine
             $shell->execute(self::CMD_RESTORE, "-f=" . $filename, TRUE, $options);
 
         } catch (Exception $e) {
-            throw new Engine_Exception(lang('configuration_backup_unable_to_start_restore') . ": " . clearos_exception_message($e), CLEAROS_WARNING);
+            throw new Engine_Exception(lang('configuration_backup_unable_to_start_restore') . ' - ' . clearos_exception_message($e), CLEAROS_WARNING);
         }
     }
 
@@ -575,7 +575,7 @@ class Configuration_Backup extends Engine
         //-------------------------------------
 
         if (empty($domain) || empty($ldap_password))
-            throw new Engine_Exception(lang('configuration_backup_could_not_convert_directory'));
+            throw new Engine_Exception(lang('configuration_backup_directory_could_not_be_converted'));
 
         clearos_log('configuration-backup', 'initializing base LDAP: ' . $domain);
         $ldap_driver->initialize_standalone($domain, $ldap_password, TRUE);
@@ -892,12 +892,12 @@ class Configuration_Backup extends Engine
             $file = new File(CLEAROS_TEMP_DIR . "/" . self::FILE_STATUS, FALSE);
             $status = array();
             if (!$file->exists())
-                throw new Engine_Exception(lang('configuration_backup_no_data'));
+                throw new Engine_Exception(lang('configuration_backup_status_data_not_available'));
 
             $lines = $file->get_contents_as_array();
 
             if (empty($lines))
-                throw new Engine_Exception(lang('configuration_backup_no_data'));
+                throw new Engine_Exception(lang('configuration_backup_status_data_not_available'));
             else
                 $lines = array_reverse($lines);
 
