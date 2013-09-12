@@ -58,6 +58,7 @@ clearos_load_language('configuration_backup');
 use \clearos\apps\base\Engine as Engine;
 use \clearos\apps\base\File as File;
 use \clearos\apps\base\Folder as Folder;
+use \clearos\apps\base\Script as Script;
 use \clearos\apps\base\Shell as Shell;
 use \clearos\apps\mode\Mode_Engine as Mode_Engine;
 use \clearos\apps\mode\Mode_Factory as Mode_Factory;
@@ -67,6 +68,7 @@ use \clearos\apps\openldap\LDAP_Driver as LDAP_Driver;
 clearos_load_library('base/Engine');
 clearos_load_library('base/File');
 clearos_load_library('base/Folder');
+clearos_load_library('base/Script');
 clearos_load_library('base/Shell');
 clearos_load_library('mode/Mode_Engine');
 clearos_load_library('mode/Mode_Factory');
@@ -813,28 +815,8 @@ class Configuration_Backup extends Engine
     {
         clearos_profile(__METHOD__, __LINE__);
 
-        try {
-            $shell = new Shell();
-            $exe = pathinfo(self::CMD_RESTORE, PATHINFO_FILENAME);
-            $exitcode = $shell->execute(self::CMD_PS, " afx | grep $exe 2>&1 & echo $!", FALSE);
-            if ($exitcode != 0)
-                throw new Engine_Exception(lang('configuration_backup_unable_to_determine_running_state'), CLEAROS_WARNING);
-            $rows = $shell->get_output();
-            $pid = -1;
-            foreach ($rows as $row) {
-                if (preg_match('/^([0-9]+)$/', $row, $match)) {
-                    $pid = trim($match[1]);
-                    continue;
-                }
-                if (preg_match('/^\s*([0-9]+)\s+.*' . $exe . '.*$/', $row, $match)) {
-                    if ((intval($match[1]) + 4) < $pid || $match[1] > $pid)
-                        return TRUE;
-                }
-            }
-            return FALSE;
-        } catch (Exception $e) {
-            throw new Engine_Exception(lang('configuration_backup_unable_to_determine_running_state'), CLEAROS_WARNING);
-        }
+        $script = new Script(basename(self::CMD_RESTORE));
+        return $script->is_running();
     }
 
     /**

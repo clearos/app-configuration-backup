@@ -54,12 +54,14 @@ clearos_load_language('configuration_backup');
 use \clearos\apps\configuration_backup\Configuration_Backup as Configuration_Backup;
 use \clearos\apps\base\Daemon as Daemon;
 use \clearos\apps\base\File as File;
+use \clearos\apps\base\Script as Script;
 use \clearos\apps\base\Shell as Shell;
 use \clearos\apps\base\Yum as Yum;
 
 clearos_load_library('configuration_backup/Configuration_Backup');
 clearos_load_library('base/Daemon');
 clearos_load_library('base/File');
+clearos_load_library('base/Script');
 clearos_load_library('base/Shell');
 clearos_load_library('base/Yum');
 
@@ -111,6 +113,8 @@ if (!isset($options['f'])) {
     echo "Full path and filename of backup tgz is required (eg. -f=/tmp/backup.tgz)\n";
     return;
 }
+
+$script = new Script();
 $configuration_backup = new Configuration_Backup();
 
 $filename = $options['f'];
@@ -125,16 +129,16 @@ if ($help) {
 
 try {
 
-    $in_progress = $configuration_backup->is_restore_in_progress();
-
-    if ($in_progress) {
+    if ($script->lock() !== TRUE) {
         update_status(0, 0, lang('configuration_backup_restore_already_in_progress'));
         exit(0);
     }
 
     restore($filename);
+    $script->unlock();
 } catch (Exception $e) {
     update_status(-1, 0, clearos_exception_message($e));
+    $script->unlock();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
