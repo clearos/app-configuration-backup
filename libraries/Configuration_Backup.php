@@ -122,7 +122,7 @@ class Configuration_Backup extends Engine
     const CMD_PS = '/bin/ps';
 
     const FILE_LIMIT = 10; // Maximum number of archives to keep
-    const SIZE_LIMIT = 51200; // Maximum size of all archives
+    const SIZE_LIMIT = 512000; // Maximum size of all archives
 
     const RELEASE_MATCH = 'match';
     const RELEASE_UPGRADE_52 = 'upgrade52';
