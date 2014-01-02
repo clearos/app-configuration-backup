@@ -125,6 +125,7 @@ class Configuration_Backup extends Engine
     const SIZE_LIMIT = 512000; // Maximum size of all archives
 
     const RELEASE_MATCH = 'match';
+    const RELEASE_MIGRATE = 'migrate';
     const RELEASE_UPGRADE_52 = 'upgrade52';
 
     ///////////////////////////////////////////////////////////////////////////////
@@ -268,6 +269,7 @@ class Configuration_Backup extends Engine
         $files = $shell->get_output();
 
         $release_found = '';
+        $import_found = FALSE;
 
         foreach ($files as $file) {
             if (preg_match("/ etc\/clearos-release$/", $file))
@@ -275,8 +277,14 @@ class Configuration_Backup extends Engine
 
             if (preg_match("/ etc\/release$/", $file))
                 $release_found = 'etc/release';
+
+            if (preg_match("/ etc\/clearos/base/import$/", $file))
+                $import_found = TRUE;
         }
 
+        if ($import_found)
+            return self::RELEASE_MIGRATE;
+        
         if (empty($release_found))
             throw new Engine_Exception(lang('configuration_backup_release_missing'), CLEAROS_ERROR);
 
@@ -658,12 +666,20 @@ class Configuration_Backup extends Engine
         $ignore_attributes_list = array(
             'createTimestamp',
             'creatorsName',
+            'cyrus-userquota',
             'entryCSN',
             'entryUUID',
-            'modifiersName',
-            'modifyTimestamp',
+            'hordePrefs',
+            'impPrefs',
+            'ingoPrefs',
             'kolabHomeServer',
             'kolabInvitationPolicy',
+            'kronolithPrefs',
+            'mnemoPrefs',
+            'modifiersName',
+            'modifyTimestamp',
+            'nagPrefs',
+            'pcnMailAliases',
             'pcnMicrosoftLanmanPassword',
             'pcnWebconfigFlag',
             'pcnFTPPassword',
@@ -674,6 +690,7 @@ class Configuration_Backup extends Engine
             'pcnProxyPassword',
             'pcnWebconfigPassword',
             'pcnWebPassword',
+            'turbaPrefs',
             'objectClass: kolabInetOrgPerson',
             'objectClass: hordePerson',
             'objectClass: pcnWebconfigAccount',
@@ -696,7 +713,7 @@ class Configuration_Backup extends Engine
                 $object_base = preg_replace('/^dn:\s*/', '', $line);
                 $object_base = preg_replace('/,.*/', '', $object_base);
 
-                if (! in_array($object_base, $ignore_objects_list)) {
+                if (!in_array($object_base, $ignore_objects_list) && !preg_match('/=calendar@/', $object_base)) {
                     $in_object = TRUE;
                     $is_a_keeper = FALSE;
                     $object_data = '';
