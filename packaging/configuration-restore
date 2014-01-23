@@ -194,7 +194,7 @@ function restore($filename)
 
     update_status(0, 25, lang('configuration_backup_unpacking_archive'));
     $shell = new Shell();
-    $shell->execute(Configuration_Backup::CMD_TAR, '-C / -xpzf ' . $filename, TRUE);
+    $shell->execute(Configuration_Backup::CMD_TAR, '--exclude=clearos-release -C / -xpzf ' . $filename, TRUE);
 
     // Install Marketplace Apps
     //-------------------------
