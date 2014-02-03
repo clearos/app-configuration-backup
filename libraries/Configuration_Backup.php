@@ -188,7 +188,7 @@ class Configuration_Backup extends Engine
             $prefix = "";
         }
 
-        $filename = "backup-" . $prefix . strftime("%m-%d-%Y-%H-%M-%S", time()) . ".tgz";
+        $filename = "backup-" . $prefix . strftime("%Y-%m-%d", time()) . ".tgz";
 
         // Create the temporary folder for the archive
         //--------------------------------------------
