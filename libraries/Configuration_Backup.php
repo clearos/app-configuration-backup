@@ -350,6 +350,20 @@ class Configuration_Backup extends Engine
     }
 
     /**
+     * Get backup file list.
+     *
+     * @return array Array of backup files from configuration file.
+     * @throws Engine_Exception
+     */
+
+    function get_file_list()
+    {
+        clearos_profile(__METHOD__, __LINE__);
+
+        return $this->file_list;
+    }
+
+    /**
      * Deletes an archive file.
      *
      * @param string $filename filename
@@ -937,20 +951,6 @@ class Configuration_Backup extends Engine
         $file = new File(CLEAROS_TEMP_DIR . "/" . self::FILE_STATUS);
         if ($file->exists())
             $file->delete();
-    }
-
-    /**
-     * Get backup file list.
-     *
-     * @return array Array of backup files from configuration file.
-     * @throws Engine_Exception
-     */
-
-    function get_file_list()
-    {
-        clearos_profile(__METHOD__, __LINE__);
-
-        return $this->file_list;
     }
 
     ///////////////////////////////////////////////////////////////////////////////
