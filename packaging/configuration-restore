@@ -91,16 +91,21 @@ $short_options  = '';
 
 // Common
 $short_options .= 'f:'; // Filename
+$short_options .= 'L'; // Live file-system restore
 $short_options .= 'o::'; // Output
 $short_options .= 'h';   // Help
 
 $helpopts  = '
-  Common Options
-  --------------
+  Usage Arguments
+  ---------------
 
-  -f=filename
-  -o=output (json [default] or stdout)
-  -h: help
+  Modes:
+    -f=filename
+    -L (live file-system restore)
+
+  Options:
+    -o=output (json [default] or stdout)
+    -h: help
 
 ';
 
@@ -109,23 +114,30 @@ $helpopts  = '
 
 $options = getopt($short_options);
 
-if (!isset($options['f'])) {
-    echo "Full path and filename of backup tgz is required (eg. -f=/tmp/backup.tgz)\n";
-    return;
+
+if (isset($options['h'])) {
+    echo "usage: " . $argv[0] . " -f=/path/to/backup.tgz|-L [options]\n";
+    echo "usage: " . $argv[0] . " -L [options]\n";
+    echo $helpopts;
+    exit(0);
+}
+
+if (!isset($options['f']) && !isset($options['L'])) {
+    echo "A backup archive (-f=filename) or a live file-system (-L) mode must be specified.\n";
+    exit(1);
+}
+
+if (isset($options['f']) && isset($options['L'])) {
+    echo "Only one mode can be specified, either -f=filename or -L.\n";
+    exit(1);
 }
 
 $script = new Script();
 $configuration_backup = new Configuration_Backup();
 
-$filename = $options['f'];
+$filename = NULL;
+if (isset($options['f'])) $filename = $options['f'];
 $output = isset($options['o']) ? $options['o'] : 'json';
-$help = isset($options['h']) ? TRUE : FALSE;
-
-if ($help) {
-    echo "usage: " . $argv[0] . " -f=/path/to/backup.tgz [options]\n";
-    echo $helpopts;
-    exit(0);
-}
 
 try {
 
