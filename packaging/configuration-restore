@@ -146,7 +146,7 @@ try {
 ///////////////////////////////////////////////////////////////////////////////
 
 /**
-* Performs a full restore.
+* Prepares for (sanity check) a restore.
 *
 * @param string $filename configuration file archive
 *
@@ -154,17 +154,10 @@ try {
 * @throws Engine_Exception
 */
 
-function restore($filename)
+function prepare($filename)
 {
     global $configuration_backup;
     clearos_profile(__METHOD__, __LINE__);
-
-    update_status(0, 5, lang('configuration_backup_restore_init'));
-
-    update_status(0, 10, lang('configuration_backup_stopping_clearsyncd'));
-    $daemon = new Daemon('clearsyncd');
-    $daemon->set_running_state(FALSE);
-
 
     update_status(0, 15, lang('configuration_backup_restore_file') . ": $filename");
 
@@ -195,9 +188,37 @@ function restore($filename)
     update_status(0, 25, lang('configuration_backup_unpacking_archive'));
     $shell = new Shell();
     $shell->execute(Configuration_Backup::CMD_TAR, '--exclude=clearos-release -C / -xpzf ' . $filename, TRUE);
+}
+
+/**
+* Performs a full restore.
+*
+* @param string $filename configuration file archive
+*
+* @return void
+* @throws Engine_Exception
+*/
+
+function restore($filename)
+{
+    global $configuration_backup;
+    clearos_profile(__METHOD__, __LINE__);
+
+    update_status(0, 5, lang('configuration_backup_restore_init'));
+
+    update_status(0, 10, lang('configuration_backup_stopping_clearsyncd'));
+    $daemon = new Daemon('clearsyncd');
+    $daemon->set_running_state(FALSE);
+
+    // Prepare for restore from archive
+    //---------------------------------
+    // TODO: Restores from the live file-system need to perform some sanity checking too.
+
+    if ($filename != NULL) prepare($filename);
 
     // Install Marketplace Apps
     //-------------------------
+
     try {
         update_status(0, 30, lang('configuration_backup_download_and_intstall_apps'));
         $file = new File(Configuration_Backup::FILE_INSTALLED_APPS);
@@ -249,7 +270,7 @@ function restore($filename)
     }
 
     // Fix PAM (tracker #1245) / TODO: remove in ClearOS 7
-    //------------------------
+    //----------------------------------------------------
 
     if (clearos_library_installed('accounts/Accounts_Configuration')) {
         clearos_load_library('accounts/Accounts_Configuration');

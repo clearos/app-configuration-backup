@@ -291,7 +291,7 @@ class Configuration_Backup extends Engine
             if (preg_match("/ etc\/release$/", $file))
                 $release_found = 'etc/release';
 
-            if (preg_match("/ etc\/clearos/base/import$/", $file))
+            if (preg_match("/ etc\/clearos\/base\/import$/", $file))
                 $import_found = TRUE;
         }
 
