@@ -500,7 +500,7 @@ class Configuration_Backup extends Engine
      * @throws Engine_Exception, Validation_Exception
      */
 
-    function restore($archive, $upload = FALSE)
+    function restore($archive, $upload = FALSE, $live = FALSE)
     {
         clearos_profile(__METHOD__, __LINE__);
 
@@ -515,10 +515,19 @@ class Configuration_Backup extends Engine
             );
 
             $shell = new Shell();
-            $shell->execute(self::CMD_RESTORE, "-f=" . $filename, TRUE, $options);
+            if ($live) {
+                $shell->execute(self::CMD_RESTORE,
+                    '-L', TRUE, $options);
+            }
+            else {
+                $shell->execute(self::CMD_RESTORE,
+                    "-f=" . $filename, TRUE, $options);
+            }
 
         } catch (Exception $e) {
-            throw new Engine_Exception(lang('configuration_backup_unable_to_start_restore') . ' - ' . clearos_exception_message($e), CLEAROS_WARNING);
+            throw new Engine_Exception(
+                lang('configuration_backup_unable_to_start_restore') .
+                ' - ' . clearos_exception_message($e), CLEAROS_WARNING);
         }
     }
 

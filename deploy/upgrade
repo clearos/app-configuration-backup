@@ -15,7 +15,7 @@ ARCHIVES=$(find /var/clearos/configuration_backup -name '*.tgz' |\
 H=0; M=0; S=0
 for ARCHIVE in $ARCHIVES; do
         FORMAT=$(echo $ARCHIVE | sed -e 's/\(.*\)\.tgz$/\1-%02d-%02d-%02d.tgz/')
-        echo mv -v "$ARCHIVE" $(printf "$FORMAT" $H $M $S)
+        mv "$ARCHIVE" $(printf "$FORMAT" $H $M $S)
         S=$[ $S + 1];
         if [ $S -eq 60 ]; then S=0; M=$[ $M + 1 ]; fi
         if [ $M -eq 60 ]; then M=0; H=$[ $H + 1 ]; fi
