@@ -15,7 +15,7 @@ ARCHIVES=$(find /var/clearos/configuration_backup -name '*.tgz' |\
 H=0; M=0; S=0
 for ARCHIVE in $ARCHIVES; do
         PREFIX=$(echo $ARCHIVE | sed -e 's/^\(.*\)backup.*$/\1backup/')
-	PARTS=$(echo $ARCHIVE | sed -e 's/.*backup-\(.*\)-\([0-9]*-[0-9]*\)-\([0-9]*\)\.tgz$/\1:\3-\2/')
+	PARTS=$(echo $ARCHIVE | sed -e 's/.*backup-\(.*\)-\([0-9]*\)-\([0-9]*-[0-9]*\)\.tgz$/\1:\3-\2/')
 	HOSTID=$(echo $PARTS | cut -d: -f1)
 	DATETIME=$(echo $PARTS | cut -d: -f2)
 
