@@ -663,12 +663,12 @@ class Configuration_Backup extends Engine
             'cn=backup_operators',
         );
 
+        // 'entryUUID',
         $ignore_attributes_list = array(
             'createTimestamp',
             'creatorsName',
             'cyrus-userquota',
             'entryCSN',
-            'entryUUID',
             'hordePrefs',
             'impPrefs',
             'ingoPrefs',
@@ -705,6 +705,7 @@ class Configuration_Backup extends Engine
 
         $all_plugins = array();
         $in_object = FALSE;
+        $keep_ignoring = FALSE;
         $import_ldif = '';
 
         foreach ($lines as $line) {
@@ -748,11 +749,19 @@ class Configuration_Backup extends Engine
                 if (preg_match('/^cn:/', $line))
                     $object_cn = preg_replace('/^cn:\s*/', '', $line);
 
+                if (preg_match('/^\s+/', $line)) {
+                    if ($keep_ignoring)
+                        continue;
+                } else {
+                    $keep_ignoring = FALSE;
+                }
+
                 // Skip unwanted attributtes
                 if (in_array($key, $ignore_attributes_list) || in_array(trim($line), $ignore_attributes_list)) {
+                    $keep_ignoring = TRUE;
                     continue;
 
-                // Conivert flags to policies
+                // Convert flags to policies
                 } else if (preg_match('/^pcnProxyFlag: TRUE/', $line)) {
                     $object_plugins[] = 'web_proxy';
                 } else if (preg_match('/^pcnOpenVPNFlag: TRUE/', $line)) {
