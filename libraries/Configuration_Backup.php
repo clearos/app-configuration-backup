@@ -133,6 +133,7 @@ class Configuration_Backup extends Engine
     ///////////////////////////////////////////////////////////////////////////////
 
     protected $file_config = NULL;
+    protected $file_list = NULL;
 
     ///////////////////////////////////////////////////////////////////////////////
     // M E T H O D S
@@ -147,6 +148,7 @@ class Configuration_Backup extends Engine
         clearos_profile(__METHOD__, __LINE__);
 
         $this->file_config = clearos_app_base('configuration_backup') . '/deploy/' . self::FILE_CONFIG;
+        $this->file_list = $this->_read_config();
     }
 
     /**
@@ -160,17 +162,15 @@ class Configuration_Backup extends Engine
     {
         clearos_profile(__METHOD__, __LINE__);
 
-        // Load the file manifest
+        // Generate file manifest
         //-----------------------
 
-        $files = $this->_read_config();
-
-        if (! $files)
+        if (! count($this->file_list))
             return FALSE;
 
         $manifest = '';
 
-        foreach ($files as $file)
+        foreach ($this->file_list as $file)
             $manifest .= $file  . ' ';
 
         $manifest = rtrim($manifest);
@@ -188,7 +188,7 @@ class Configuration_Backup extends Engine
             $prefix = "";
         }
 
-        $filename = "backup-" . $prefix . strftime("%Y-%m-%d", time()) . ".tgz";
+        $filename = "backup-" . $prefix . strftime("%m-%d-%Y-%H-%M-%S", time()) . ".tgz";
 
         // Create the temporary folder for the archive
         //--------------------------------------------
@@ -201,18 +201,7 @@ class Configuration_Backup extends Engine
         // Dump the app RPM list
         //----------------------
 
-        $shell = new Shell();
-        $args = "-qa --queryformat='%{NAME}\n' | grep ^app- | sort";
-        $shell->execute(self::CMD_RPM, $args, TRUE);
-        $output = $shell->get_output();
-
-        $file = new File(self::FILE_INSTALLED_APPS);
-
-        if ($file->exists())
-            $file->delete();
-
-        $file->create('root', 'root', '0644');
-        $file->add_lines(implode($output, "\n") . "\n");
+        $this->update_installed_apps();
 
         // Dump the current LDAP database
         //-------------------------------
@@ -237,6 +226,30 @@ class Configuration_Backup extends Engine
         $archive->chmod(600);
 
         return self::FOLDER_BACKUP . '/' . $filename;
+    }
+
+    /*
+     * Update list of installed app RPMs.
+     *
+     * @throws Engine_Exception
+     */
+
+    function update_installed_apps()
+    {
+        clearos_profile(__METHOD__, __LINE__);
+
+        $shell = new Shell();
+        $args = "-qa --queryformat='%{NAME}\n' | grep ^app- | sort";
+        $shell->execute(self::CMD_RPM, $args, TRUE);
+        $output = $shell->get_output();
+
+        $file = new File(self::FILE_INSTALLED_APPS);
+
+        if ($file->exists())
+            $file->delete();
+
+        $file->create('root', 'root', '0644');
+        $file->add_lines(implode($output, "\n") . "\n");
     }
 
     /**
@@ -278,7 +291,7 @@ class Configuration_Backup extends Engine
             if (preg_match("/ etc\/release$/", $file))
                 $release_found = 'etc/release';
 
-            if (preg_match("/ etc\/clearos/base/import$/", $file))
+            if (preg_match("/ etc\/clearos\/base\/import$/", $file))
                 $import_found = TRUE;
         }
 
@@ -334,6 +347,20 @@ class Configuration_Backup extends Engine
         clearos_profile(__METHOD__, __LINE__);
 
         return $this->_get_list(self::FOLDER_UPLOAD);
+    }
+
+    /**
+     * Get backup file list.
+     *
+     * @return array Array of backup files from configuration file.
+     * @throws Engine_Exception
+     */
+
+    function get_file_list()
+    {
+        clearos_profile(__METHOD__, __LINE__);
+
+        return $this->file_list;
     }
 
     /**
@@ -473,7 +500,7 @@ class Configuration_Backup extends Engine
      * @throws Engine_Exception, Validation_Exception
      */
 
-    function restore($archive, $upload = FALSE)
+    function restore($archive, $upload = FALSE, $live = FALSE)
     {
         clearos_profile(__METHOD__, __LINE__);
 
@@ -488,10 +515,19 @@ class Configuration_Backup extends Engine
             );
 
             $shell = new Shell();
-            $shell->execute(self::CMD_RESTORE, "-f=" . $filename, TRUE, $options);
+            if ($live) {
+                $shell->execute(self::CMD_RESTORE,
+                    '-L', TRUE, $options);
+            }
+            else {
+                $shell->execute(self::CMD_RESTORE,
+                    "-f=" . $filename, TRUE, $options);
+            }
 
         } catch (Exception $e) {
-            throw new Engine_Exception(lang('configuration_backup_unable_to_start_restore') . ' - ' . clearos_exception_message($e), CLEAROS_WARNING);
+            throw new Engine_Exception(
+                lang('configuration_backup_unable_to_start_restore') .
+                ' - ' . clearos_exception_message($e), CLEAROS_WARNING);
         }
     }
 
@@ -1045,3 +1081,5 @@ class Configuration_Backup extends Engine
         $file->chmod(600);
     }
 }
+
+// vi: expandtab shiftwidth=4 softtabstop=4 tabstop=4

@@ -1,7 +1,7 @@
 
 Name: app-configuration-backup
 Epoch: 1
-Version: 1.5.11
+Version: 1.5.18
 Release: 1%{dist}
 Summary: Configuration Backup
 License: GPLv3
@@ -19,7 +19,7 @@ Summary: Configuration Backup - Core
 License: LGPLv3
 Group: ClearOS/Libraries
 Requires: app-base-core
-Requires: app-base-core >= 1:1.4.23
+Requires: app-base-core >= 1:1.5.32
 Requires: app-network-core
 Requires: app-tasks-core
 

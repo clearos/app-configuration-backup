@@ -91,16 +91,21 @@ $short_options  = '';
 
 // Common
 $short_options .= 'f:'; // Filename
+$short_options .= 'L'; // Live file-system restore
 $short_options .= 'o::'; // Output
 $short_options .= 'h';   // Help
 
 $helpopts  = '
-  Common Options
-  --------------
+  Usage Arguments
+  ---------------
 
-  -f=filename
-  -o=output (json [default] or stdout)
-  -h: help
+  Modes:
+    -f=filename
+    -L (live file-system restore)
+
+  Options:
+    -o=output (json [default] or stdout)
+    -h: help
 
 ';
 
@@ -109,23 +114,30 @@ $helpopts  = '
 
 $options = getopt($short_options);
 
-if (!isset($options['f'])) {
-    echo "Full path and filename of backup tgz is required (eg. -f=/tmp/backup.tgz)\n";
-    return;
+
+if (isset($options['h'])) {
+    echo "usage: " . $argv[0] . " -f=/path/to/backup.tgz|-L [options]\n";
+    echo "usage: " . $argv[0] . " -L [options]\n";
+    echo $helpopts;
+    exit(0);
+}
+
+if (!isset($options['f']) && !isset($options['L'])) {
+    echo "A backup archive (-f=filename) or a live file-system (-L) mode must be specified.\n";
+    exit(1);
+}
+
+if (isset($options['f']) && isset($options['L'])) {
+    echo "Only one mode can be specified, either -f=filename or -L.\n";
+    exit(1);
 }
 
 $script = new Script();
 $configuration_backup = new Configuration_Backup();
 
-$filename = $options['f'];
+$filename = NULL;
+if (isset($options['f'])) $filename = $options['f'];
 $output = isset($options['o']) ? $options['o'] : 'json';
-$help = isset($options['h']) ? TRUE : FALSE;
-
-if ($help) {
-    echo "usage: " . $argv[0] . " -f=/path/to/backup.tgz [options]\n";
-    echo $helpopts;
-    exit(0);
-}
 
 try {
 
@@ -146,7 +158,7 @@ try {
 ///////////////////////////////////////////////////////////////////////////////
 
 /**
-* Performs a full restore.
+* Prepares for (sanity check) a restore.
 *
 * @param string $filename configuration file archive
 *
@@ -154,17 +166,10 @@ try {
 * @throws Engine_Exception
 */
 
-function restore($filename)
+function prepare($filename)
 {
     global $configuration_backup;
     clearos_profile(__METHOD__, __LINE__);
-
-    update_status(0, 5, lang('configuration_backup_restore_init'));
-
-    update_status(0, 10, lang('configuration_backup_stopping_clearsyncd'));
-    $daemon = new Daemon('clearsyncd');
-    $daemon->set_running_state(FALSE);
-
 
     update_status(0, 15, lang('configuration_backup_restore_file') . ": $filename");
 
@@ -195,9 +200,37 @@ function restore($filename)
     update_status(0, 25, lang('configuration_backup_unpacking_archive'));
     $shell = new Shell();
     $shell->execute(Configuration_Backup::CMD_TAR, '--exclude=clearos-release -C / -xpzf ' . $filename, TRUE);
+}
+
+/**
+* Performs a full restore.
+*
+* @param string $filename configuration file archive
+*
+* @return void
+* @throws Engine_Exception
+*/
+
+function restore($filename)
+{
+    global $configuration_backup;
+    clearos_profile(__METHOD__, __LINE__);
+
+    update_status(0, 5, lang('configuration_backup_restore_init'));
+
+    update_status(0, 10, lang('configuration_backup_stopping_clearsyncd'));
+    $daemon = new Daemon('clearsyncd');
+    $daemon->set_running_state(FALSE);
+
+    // Prepare for restore from archive
+    //---------------------------------
+    // TODO: Restores from the live file-system need to perform some sanity checking too.
+
+    if ($filename != NULL) prepare($filename);
 
     // Install Marketplace Apps
     //-------------------------
+
     try {
         update_status(0, 30, lang('configuration_backup_download_and_intstall_apps'));
         $file = new File(Configuration_Backup::FILE_INSTALLED_APPS);
@@ -249,7 +282,7 @@ function restore($filename)
     }
 
     // Fix PAM (tracker #1245) / TODO: remove in ClearOS 7
-    //------------------------
+    //----------------------------------------------------
 
     if (clearos_library_installed('accounts/Accounts_Configuration')) {
         clearos_load_library('accounts/Accounts_Configuration');
