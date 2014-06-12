@@ -216,9 +216,9 @@ function restore($filename)
     global $configuration_backup;
     clearos_profile(__METHOD__, __LINE__);
 
-    update_status(0, 5, lang('configuration_backup_restore_init'));
+    update_status(0, 5, lang('base_initializing'));
 
-    update_status(0, 10, lang('configuration_backup_stopping_clearsyncd'));
+    update_status(0, 10, lang('configuration_backup_stopping_event_system'));
     $daemon = new Daemon('clearsyncd');
     $daemon->set_running_state(FALSE);
 
@@ -353,7 +353,7 @@ function restore($filename)
         }
     }
 
-    update_status(0, 90, lang('configuration_backup_starting_clearsyncd'));
+    update_status(0, 90, lang('configuration_backup_starting_event_system'));
     $daemon = new Daemon('clearsyncd');
     $daemon->set_running_state(TRUE);
 
