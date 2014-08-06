@@ -1,7 +1,7 @@
 
 Name: app-configuration-backup
 Epoch: 1
-Version: 1.5.18
+Version: 1.6.5
 Release: 1%{dist}
 Summary: Configuration Backup
 License: GPLv3
@@ -12,7 +12,7 @@ Requires: %{name}-core = 1:%{version}-%{release}
 Requires: app-base
 
 %description
-The configuration backup and restore app allows an administrator to take a snapshot (archive file) of all configuration settings of the system, allowing easy restoration in the event data is lost.
+The configuration backup and restore app allows an administrator to take a snapshot of all configuration settings of the system, allowing easy restoration in the event of data loss.
 
 %package core
 Summary: Configuration Backup - Core
@@ -24,7 +24,7 @@ Requires: app-network-core
 Requires: app-tasks-core
 
 %description core
-The configuration backup and restore app allows an administrator to take a snapshot (archive file) of all configuration settings of the system, allowing easy restoration in the event data is lost.
+The configuration backup and restore app allows an administrator to take a snapshot of all configuration settings of the system, allowing easy restoration in the event of data loss.
 
 This package provides the core API and libraries.
 
