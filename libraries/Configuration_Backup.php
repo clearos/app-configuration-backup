@@ -7,7 +7,7 @@
  * @package    configuration-backup
  * @subpackage libraries
  * @author     ClearFoundation <developer@clearfoundation.com>
- * @copyright  2003-2011 ClearFoundation
+ * @copyright  2003-2014 ClearFoundation
  * @license    http://www.gnu.org/copyleft/lgpl.html GNU Lesser General Public License version 3 or later
  * @link       http://www.clearfoundation.com/docs/developer/apps/configuration_backup/
  */
@@ -98,7 +98,7 @@ clearos_load_library('base/Validation_Exception');
  * @package    configuration-backup
  * @subpackage libraries
  * @author     ClearFoundation <developer@clearfoundation.com>
- * @copyright  2003-2011 ClearFoundation
+ * @copyright  2003-2014 ClearFoundation
  * @license    http://www.gnu.org/copyleft/lgpl.html GNU Lesser General Public License version 3 or later
  * @link       http://www.clearfoundation.com/docs/developer/apps/configuration_backup/
  */
@@ -228,10 +228,11 @@ class Configuration_Backup extends Engine
         return self::FOLDER_BACKUP . '/' . $filename;
     }
 
-    /*
-     * Update list of installed app RPMs.
+    /**
+     * Updates list of installed app RPMs.
      *
      * @throws Engine_Exception
+     * @return void
      */
 
     function update_installed_apps()
@@ -350,7 +351,7 @@ class Configuration_Backup extends Engine
     }
 
     /**
-     * Get backup file list.
+     * Returns backup file list.
      *
      * @return array Array of backup files from configuration file.
      * @throws Engine_Exception
@@ -495,6 +496,7 @@ class Configuration_Backup extends Engine
      *
      * @param string  $archive filename of the archive to restore
      * @param boolean $upload  boolean denoting use upload file path
+     * @param boolean $live    boolean denoting use of live restore
      *
      * @return void
      * @throws Engine_Exception, Validation_Exception
@@ -516,23 +518,21 @@ class Configuration_Backup extends Engine
 
             $shell = new Shell();
             if ($live) {
-                $shell->execute(self::CMD_RESTORE,
-                    '-L', TRUE, $options);
-            }
-            else {
-                $shell->execute(self::CMD_RESTORE,
-                    "-f=" . $filename, TRUE, $options);
+                $shell->execute(self::CMD_RESTORE, '-L', TRUE, $options);
+            } else {
+                $shell->execute(self::CMD_RESTORE, "-f=" . $filename, TRUE, $options);
             }
 
         } catch (Exception $e) {
             throw new Engine_Exception(
                 lang('configuration_backup_unable_to_start_restore') .
-                ' - ' . clearos_exception_message($e), CLEAROS_WARNING);
+                ' - ' . clearos_exception_message($e), CLEAROS_WARNING
+            );
         }
     }
 
     /**
-     * Performs a restore for version 5.2.
+     * Performs a restore from version 5.2.
      *
      * @param string $full_path full path of configuration archive
      *
@@ -792,12 +792,12 @@ class Configuration_Backup extends Engine
                     $keep_ignoring = FALSE;
                 }
 
-                // Skip unwanted attributtes
+                // Skip unwanted attributes,
+                // Convert flags to policies,
+                // Dump the rest of the attributes
                 if (in_array($key, $ignore_attributes_list) || in_array(trim($line), $ignore_attributes_list)) {
                     $keep_ignoring = TRUE;
                     continue;
-
-                // Convert flags to policies
                 } else if (preg_match('/^pcnProxyFlag: TRUE/', $line)) {
                     $object_plugins[] = 'web_proxy';
                 } else if (preg_match('/^pcnOpenVPNFlag: TRUE/', $line)) {
@@ -811,13 +811,14 @@ class Configuration_Backup extends Engine
                     $object_plugins[] = 'smtp';
                 } else if (preg_match('/^pcn.*Flag:/', $line)) {
                     continue;
-
-                // Dump the rest of the attributes
                 } else {
-                    // Convert some 1-to-1 attributes
                     $line = preg_replace('/^pcnSHAPassword:/', 'clearSHAPassword:', $line);
                     $line = preg_replace('/^pcnMicrosoftNTPassword:/', 'clearMicrosoftNTPassword:', $line);
-                    $line = preg_replace('/^objectClass: pcnAccount/', "objectClass: clearAccount\nobjectClass: clearContactAccount\nclearAccountStatus: enabled", $line);
+                    $line = preg_replace(
+                        '/^objectClass: pcnAccount/', 
+                        "objectClass: clearAccount\nobjectClass: clearContactAccount\nclearAccountStatus: enabled", 
+                        $line
+                    );
 
                     // uid: captures users and computers
                     // gidNumber captures groups 
@@ -957,9 +958,10 @@ class Configuration_Backup extends Engine
     }
 
     /**
-     * Reset status.
+     * Resets status.
      *
      * @throws Engine_Exception
+     * @return void
      */
 
     function reset_restore_status()
