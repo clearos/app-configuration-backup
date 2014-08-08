@@ -10,6 +10,7 @@ Source: %{name}-%{version}.tar.gz
 Buildarch: noarch
 Requires: %{name}-core = 1:%{version}-%{release}
 Requires: app-base
+Requires: app-registration
 
 %description
 The configuration backup and restore app allows an administrator to take a snapshot of all configuration settings of the system, allowing easy restoration in the event of data loss.

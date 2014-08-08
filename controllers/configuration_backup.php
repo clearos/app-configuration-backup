@@ -70,6 +70,12 @@ class Configuration_Backup extends ClearOS_Controller
         $this->load->library('configuration_backup/Configuration_Backup');
         $this->lang->load('configuration_backup');
 
+        // Check registration
+        //
+        // System should be registered in order to access paid apps
+        // that might need to be restored as well.
+        //---------------------------------------------------------
+
         // TODO - Add registration 'is registered' function 
         if (!file_exists('/var/clearos/registration/registered')) {
             $this->page->set_message(lang('configuration_backup_not_registered'), 'warning');

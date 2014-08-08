@@ -31,6 +31,10 @@ $app['controllers']['configuration_backup']['title'] = $app['name'];
 // Packaging
 /////////////////////////////////////////////////////////////////////////////
 
+$app['requires'] = array(
+    'app-registration',
+);
+
 $app['core_requires'] = array(
     'app-base-core >= 1:1.5.32',
     'app-network-core',
