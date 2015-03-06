@@ -57,9 +57,13 @@ foreach ($archives as $archive) {
 
     $items[] = $item;
 }
+
+$options['default_rows'] = 50;
+
 echo summary_table(
     lang('configuration_backup_archives'),
     array(anchor_custom('/app/configuration_backup/create_archive', lang('configuration_backup_backup_now'), 'high')),
     array(lang('base_filename')),
-    $items
+    $items,
+    $options
 );

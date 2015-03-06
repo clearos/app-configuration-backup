@@ -36,9 +36,6 @@ echo "
 
 $(document).ready(function() {
 
-    // FIXME: CSS hack...Multipart form screw up width
-    $('#upload_form').css('width', '100%');
-
     if ($('#logs').length != 0)
         get_status();
 
@@ -60,6 +57,7 @@ function get_status() {
                 return;
             }
                 
+            table_logs = get_table_logs();
             if (data.code < 0) {
                 table_logs.fnClearTable();
             } else {
@@ -71,18 +69,18 @@ function get_status() {
                         if (data.logs[index] == null)
                             continue;
                         date = new Date(data.logs[index].timestamp*1000);
-                        span_tag = '<span>';
+
                         if (data.logs[index].code != 0)
-                            span_tag = '<span style=\'color: red;\'>';
+                            span_tag = '<span class=\'theme-text-alert\'>';
+                        else
+                            span_tag = '<span>';
+
                         table_logs.fnAddData([
                             span_tag + data.logs[index].msg + '</span>',
                             span_tag + $.datepicker.formatDate('M d, yy', date) + ' ' + date.toLocaleTimeString() + '</span>'
                         ]);
-                        if (index == 0) {
-                            $('#progress').progressbar({
-                                value: Math.round(data.logs[index].progress)
-                            });
-                        }
+                        if (index == 0)
+                            clearos_set_progress_bar('restore_progress', data.logs[index].progress, null);
                     }
                     table_logs.fnAdjustColumnSizing();
                     table_logs.each(function(){

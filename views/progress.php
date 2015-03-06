@@ -7,7 +7,7 @@
  * @package    configuration-backup
  * @subpackage views
  * @author     ClearFoundation <developer@clearfoundation.com>
- * @copyright  2011 ClearFoundation
+ * @copyright  2011-2015 ClearFoundation
  * @license    http://www.gnu.org/copyleft/gpl.html GNU General Public License version 3 or later
  * @link       http://www.clearfoundation.com/docs/developer/apps/configuration_backup/
  */
@@ -36,7 +36,6 @@
 $this->lang->load('base');
 $this->lang->load('configuration_backup');
 
-echo "<h2>" . lang('base_progress') . "</h2>";
-echo "<div style='padding-bottom: 30px;'>";
-echo progress_bar('progress', array('input' => 'progress'));
-echo "</div>";
+echo box_open(lang('base_progress'));
+echo progress_bar('restore_progress', array('input' => 'progress'));
+echo box_close();
