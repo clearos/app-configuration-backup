@@ -51,8 +51,11 @@ $app['core_file_manifest'] = array(
     )
 );
 
-
 $app['core_directory_manifest'] = array(
    '/var/clearos/configuration_backup' => array(),
    '/var/clearos/configuration_backup/upload' => array('mode' => '775', 'owner' => 'root', 'group' => 'webconfig')
+);
+
+$app['delete_dependency'] = array(
+    'app-configuration-backup-core',
 );
