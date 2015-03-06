@@ -39,3 +39,13 @@ $this->lang->load('configuration_backup');
 echo box_open(lang('base_progress'));
 echo progress_bar('restore_progress', array('input' => 'progress'));
 echo box_close();
+
+echo modal_info(
+    "restore_complete",
+    lang('base_information'),
+    lang('configuration_backup_restore_complete'),
+    array(
+        'type' => 'info',
+        'redirect_on_close' => '/app/configuration_backup'
+    )
+);

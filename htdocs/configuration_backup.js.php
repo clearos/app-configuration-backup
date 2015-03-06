@@ -79,8 +79,12 @@ function get_status() {
                             span_tag + data.logs[index].msg + '</span>',
                             span_tag + $.datepicker.formatDate('M d, yy', date) + ' ' + date.toLocaleTimeString() + '</span>'
                         ]);
-                        if (index == 0)
+                        if (index == 0) {
                             clearos_set_progress_bar('restore_progress', data.logs[index].progress, null);
+                            if (data.logs[index].progress == 100) {
+                                clearos_modal_infobox_open('restore_complete');
+                            }
+                        }
                     }
                     table_logs.fnAdjustColumnSizing();
                     table_logs.each(function(){
