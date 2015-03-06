@@ -214,13 +214,15 @@ function prepare($filename)
 function restore($filename)
 {
     global $configuration_backup;
+
     clearos_profile(__METHOD__, __LINE__);
 
     update_status(0, 5, lang('base_initializing'));
 
     update_status(0, 10, lang('configuration_backup_stopping_event_system'));
-    $daemon = new Daemon('clearsyncd');
-    $daemon->set_running_state(FALSE);
+    $daemon = new Daemon('clearsync');
+    if ($daemon->is_installed())
+        $daemon->set_running_state(FALSE);
 
     // Prepare for restore from archive
     //---------------------------------
@@ -317,29 +319,54 @@ function restore($filename)
     // Restart services
     //-----------------
 
+    $restart_list = array();
+
     $shell = new Shell();
-    $shell->execute('/sbin/chkconfig', '--list | grep "3:on"');
-    $rows = $shell->get_output();
+    $shell->execute('/sbin/chkconfig', '--list 2>/dev/null | grep "3:on"');
+    $chkconfig_rows = $shell->get_output();
+
+    $shell->execute('/usr/bin/systemctl', 'list-unit-files --type=service');
+    $systemd_rows = $shell->get_output();
+
+    foreach ($chkconfig_rows as $row) {
+        $daemon_name = trim(preg_replace('/^([-\w]+)\s+.*$/', '$1', $row));
+        $restart_list[] = $daemon_name;
+    }
+
+    foreach ($systemd_rows as $row) {
+        if (!preg_match('/enabled$/', $row))
+            continue;
+
+        $daemon_name = trim(preg_replace('/\.service\s+.*/', '', $row));
+        $restart_list[] = $daemon_name;
+    }
+
     $exclude_daemons = array(
         'auditd',
-        'blk-availability',
+        'chronyd',
         'cloud-init',
-        'clearsyncd',
-        'haldaemon',
-        'lvm2',
+        'clearsync',
+        'dmraid-activation',
+        'getty@',
+        'irqbalance',
+        'iscsi',
+        'lvm2-monitor',
         'mdmonitor',
+        'multipathd',
         'messagebus',
         'netfs',
         'network',
         'portreserve',
         'rsyslog',
-        'udev-post',
         'slapd',
         'storage',
+        'systemd-readahead-collect',
+        'systemd-readahead-drop',
+        'systemd-readahead-replay',
         'webconfig'
     );
-    foreach ($rows as $row) {
-        $dname = trim(preg_replace('/^([-\w]+)\s+.*$/','$1', $row));
+
+    foreach ($restart_list as $dname) {
         if (in_array($dname, $exclude_daemons))
             continue;
 
@@ -354,8 +381,9 @@ function restore($filename)
     }
 
     update_status(0, 90, lang('configuration_backup_starting_event_system'));
-    $daemon = new Daemon('clearsyncd');
-    $daemon->set_running_state(TRUE);
+    $daemon = new Daemon('clearsync');
+    if ($daemon->is_installed())
+        $daemon->set_running_state(TRUE);
 
     update_status(0, 100, lang('configuration_backup_restore_complete'));
     exit(0);
@@ -379,7 +407,7 @@ function update_status($code, $progress, $msg)
         echo $msg . "\n";
     } else {
         $file = new File(CLEAROS_TEMP_DIR . "/" . Configuration_Backup::FILE_STATUS, FALSE);
-	// 5 is Initialization progress
+        // 5 is Initialization progress
         if ($file->exists() && $progress == 5)
             $file->delete();
         if (!$file->exists())
