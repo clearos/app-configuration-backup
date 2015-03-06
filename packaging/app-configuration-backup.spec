@@ -3,7 +3,7 @@ Name: app-configuration-backup
 Epoch: 1
 Version: 2.0.18
 Release: 1%{dist}
-Summary: Configuration Backup
+Summary: Configuration Backup and Restore
 License: GPLv3
 Group: ClearOS/Apps
 Source: %{name}-%{version}.tar.gz
@@ -16,7 +16,7 @@ Requires: app-registration
 The configuration backup and restore app allows an administrator to take a snapshot of all configuration settings of the system, allowing easy restoration in the event of data loss.
 
 %package core
-Summary: Configuration Backup - Core
+Summary: Configuration Backup and Restore - Core
 License: LGPLv3
 Group: ClearOS/Libraries
 Requires: app-base-core
