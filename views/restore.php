@@ -57,6 +57,9 @@ if ($restore_ready) {
 // Form
 ///////////////////////////////////////////////////////////////////////////////
 
+if ($upload_error)
+    echo infobox_warning('adfd', $upload_error);
+
 echo form_open_multipart('configuration_backup/restore');
 echo form_header(lang('configuration_backup_restore_from_archive'), array('id' => 'upload_form'));
 
