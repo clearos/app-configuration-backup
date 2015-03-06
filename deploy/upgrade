@@ -18,7 +18,7 @@ for ARCHIVE in $ARCHIVES; do
 
     FORMAT="$PREFIX-$HOSTID-$DATETIME-%02d-%02d-%02d.tgz"
 
-    mv "$ARCHIVE" "$(printf $FORMAT $H $M $S)"
+    mv "$ARCHIVE" "$(printf $FORMAT $H $M $S)" >/dev/null 2>&1
 
     S=$[ $S + 1];
     if [ $S -eq 60 ]; then S=0; M=$[ $M + 1 ]; fi
