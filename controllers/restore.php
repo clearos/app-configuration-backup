@@ -77,18 +77,25 @@ class Restore extends ClearOS_Controller
         $data['size'] = 0;
         $data['show_cancel'] = FALSE;
 
-        if ($this->input->post('upload') && !$this->upload->do_upload('restore_file')) {
-            $data['show_cancel'] = TRUE;
-            $data['upload_error'] = $this->upload->display_errors();
-        } else if ($this->input->post('upload')) {
-            $upload = $this->upload->data();
-            $this->configuration_backup->set_backup_file($upload['file_name']);
+        try {
+            // TODO: add proper validator
+            if ($this->input->post('upload') && !$this->upload->do_upload('restore_file')) {
+                $data['show_cancel'] = TRUE;
+                $data['upload_error'] = $this->upload->display_errors();
+            } else if ($this->input->post('upload')) {
+                $upload = $this->upload->data();
+                $this->configuration_backup->set_backup_file($upload['file_name']);
 
-            $data['filename'] = $upload['file_name'];
-            $data['restore_ready'] = TRUE;
-            // TODO: discuss a consistent format with team 
-            $data['size'] = byte_format($this->configuration_backup->get_backup_size($upload['file_name']), 1);
+                $data['filename'] = $upload['file_name'];
+                $data['restore_ready'] = TRUE;
+                // TODO: discuss a consistent format with team
+                $data['size'] = byte_format($this->configuration_backup->get_backup_size($upload['file_name']), 1);
+            }
+        } catch (Exception $e) {
+            $this->page->view_exception($e);
+            return;
         }
+
 
         // Load views
         //-----------
