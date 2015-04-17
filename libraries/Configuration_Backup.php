@@ -229,31 +229,6 @@ class Configuration_Backup extends Engine
     }
 
     /**
-     * Updates list of installed app RPMs.
-     *
-     * @throws Engine_Exception
-     * @return void
-     */
-
-    function update_installed_apps()
-    {
-        clearos_profile(__METHOD__, __LINE__);
-
-        $shell = new Shell();
-        $args = "-qa --queryformat='%{NAME}\n' | grep ^app- | sort";
-        $shell->execute(self::CMD_RPM, $args, TRUE);
-        $output = $shell->get_output();
-
-        $file = new File(self::FILE_INSTALLED_APPS);
-
-        if ($file->exists())
-            $file->delete();
-
-        $file->create('root', 'root', '0644');
-        $file->add_lines(implode($output, "\n") . "\n");
-    }
-
-    /**
      * Verifies version information.
      *
      * @param string $full_path filename of the archive
@@ -323,48 +298,6 @@ class Configuration_Backup extends Engine
     }
 
     /**
-     * Returns an array of archived backups on the server.
-     *
-     * @return array a list of archives
-     * @throws Engine_Exception
-     */
-
-    function get_archive_list()
-    {
-        clearos_profile(__METHOD__, __LINE__);
-
-        return $this->_get_list(self::FOLDER_BACKUP);
-    }
-
-    /**
-     * Returns an array of uploaded backups on the server.
-     *
-     * @return array a list of uploads
-     * @throws Engine_Exception
-     */
-
-    function get_upload_list()
-    {
-        clearos_profile(__METHOD__, __LINE__);
-
-        return $this->_get_list(self::FOLDER_UPLOAD);
-    }
-
-    /**
-     * Returns backup file list.
-     *
-     * @return array Array of backup files from configuration file.
-     * @throws Engine_Exception
-     */
-
-    function get_file_list()
-    {
-        clearos_profile(__METHOD__, __LINE__);
-
-        return $this->file_list;
-    }
-
-    /**
      * Deletes an archive file.
      *
      * @param string $filename filename
@@ -385,6 +318,138 @@ class Configuration_Backup extends Engine
         } catch (Exception $e) {
             // Not fatal
         }
+    }
+
+    /**
+     * Resets (deletes) the backup file.
+     *
+     * @param string $filename filename
+     *
+     * @return void
+     * @throws Engine_Exception, File_Not_Found_Exception
+     */
+
+    function delete_backup_file($filename)
+    {
+        clearos_profile(__METHOD__, __LINE__);
+
+        Validation_Exception::is_valid($this->validate_filename($filename));
+
+        $file = new File(self::FOLDER_UPLOAD . '/' . $filename, TRUE);
+
+        $file->delete();
+    }
+
+    /**
+     * Returns an array of archived backups on the server.
+     *
+     * @return array a list of archives
+     * @throws Engine_Exception
+     */
+
+    function get_archive_list()
+    {
+        clearos_profile(__METHOD__, __LINE__);
+
+        return $this->_get_list(self::FOLDER_BACKUP);
+    }
+
+    /**
+     * Fetches the size of a backup file.
+     *
+     * @param string $filename filename
+     *
+     * @return integer size 
+     * @throws Engine_Exception, File_Not_Found_Exception
+     */
+
+    function get_backup_size($filename)
+    {
+        clearos_profile(__METHOD__, __LINE__);
+
+        Validation_Exception::is_valid($this->validate_filename($filename));
+
+        $file = new File(self::FOLDER_UPLOAD . '/' . $filename, TRUE);
+
+        return $file->get_size();
+    }
+
+    /**
+     * Returns JSON-encoded data indicating progress of restore operation.
+     *
+     * @return array
+     * @throws Engine_Exception
+     */
+
+    function get_restore_progress()
+    {
+        clearos_profile(__METHOD__, __LINE__);
+
+        try {
+            $file = new File(CLEAROS_TEMP_DIR . "/" . self::FILE_STATUS, FALSE);
+            $status = array();
+            if (!$file->exists())
+                throw new Engine_Exception(lang('configuration_backup_status_data_not_available'));
+
+            $lines = $file->get_contents_as_array();
+
+            if (empty($lines))
+                throw new Engine_Exception(lang('configuration_backup_status_data_not_available'));
+            else
+                $lines = array_reverse($lines);
+
+            foreach ($lines as $line)
+                $status[] = json_decode($line);
+            
+            return $status;
+        } catch (Exception $e) {
+            return '...';
+            // TODO: this gets triggered on a timing issue.
+            // throw new Engine_Exception(clearos_exception_message($e));
+        }
+    }
+
+    /**
+     * Returns backup file list.
+     *
+     * @return array Array of backup files from configuration file.
+     * @throws Engine_Exception
+     */
+
+    function get_file_list()
+    {
+        clearos_profile(__METHOD__, __LINE__);
+
+        return $this->file_list;
+    }
+
+    /**
+     * Returns an array of uploaded backups on the server.
+     *
+     * @return array a list of uploads
+     * @throws Engine_Exception
+     */
+
+    function get_upload_list()
+    {
+        clearos_profile(__METHOD__, __LINE__);
+
+        return $this->_get_list(self::FOLDER_UPLOAD);
+    }
+
+    /**
+     * Returns boolean indicating whether restore is currently running.
+     *
+     * @return boolean
+     * @throws Engine_Exception
+     */
+
+    function is_restore_in_progress()
+    {
+        clearos_profile(__METHOD__, __LINE__);
+
+        $script = new Script(basename(self::CMD_RESTORE));
+        return $script->is_running();
     }
 
     /**
@@ -489,6 +554,22 @@ class Configuration_Backup extends Engine
                 // Not fatal
             }
         }
+    }
+
+    /**
+     * Resets status.
+     *
+     * @throws Engine_Exception
+     * @return void
+     */
+
+    function reset_restore_status()
+    {
+        clearos_profile(__METHOD__, __LINE__);
+
+        $file = new File(CLEAROS_TEMP_DIR . "/" . self::FILE_STATUS);
+        if ($file->exists())
+            $file->delete();
     }
 
     /**
@@ -866,111 +947,51 @@ class Configuration_Backup extends Engine
         // TODO - preserve Master object
     }
 
-
     /**
-     * Returns boolean indicating whether restore is currently running.
-     *
-     * @return boolean
-     * @throws Engine_Exception
-     */
-
-    function is_restore_in_progress()
-    {
-        clearos_profile(__METHOD__, __LINE__);
-
-        $script = new Script(basename(self::CMD_RESTORE));
-        return $script->is_running();
-    }
-
-    /**
-     * Resets (deletes) the backup file.
+     * Put the backup file in the cache directory, ready for import begin.
      *
      * @param string $filename filename
      *
+     * @filename string backup filename
      * @return void
      * @throws Engine_Exception, File_Not_Found_Exception
      */
 
-    function delete_backup_file($filename)
+    function set_backup_file($filename)
     {
         clearos_profile(__METHOD__, __LINE__);
 
-        Validation_Exception::is_valid($this->validate_filename($filename));
+        $file = new File(CLEAROS_TEMP_DIR . '/' . $filename, TRUE);
 
-        $file = new File(self::FOLDER_UPLOAD . '/' . $filename, TRUE);
-
-        $file->delete();
+        // Move uploaded file to cache
+        $file->move_to(self::FOLDER_UPLOAD . '/' . $filename);
+        $file->chown('root', 'root'); 
+        $file->chmod(600);
     }
 
     /**
-     * Fetches the size of a backup file.
-     *
-     * @param string $filename filename
-     *
-     * @return integer size 
-     * @throws Engine_Exception, File_Not_Found_Exception
-     */
-
-    function get_backup_size($filename)
-    {
-        clearos_profile(__METHOD__, __LINE__);
-
-        Validation_Exception::is_valid($this->validate_filename($filename));
-
-        $file = new File(self::FOLDER_UPLOAD . '/' . $filename, TRUE);
-
-        return $file->get_size();
-    }
-
-    /**
-     * Returns JSON-encoded data indicating progress of restore operation.
-     *
-     * @return array
-     * @throws Engine_Exception
-     */
-
-    function get_restore_progress()
-    {
-        clearos_profile(__METHOD__, __LINE__);
-
-        try {
-            $file = new File(CLEAROS_TEMP_DIR . "/" . self::FILE_STATUS, FALSE);
-            $status = array();
-            if (!$file->exists())
-                throw new Engine_Exception(lang('configuration_backup_status_data_not_available'));
-
-            $lines = $file->get_contents_as_array();
-
-            if (empty($lines))
-                throw new Engine_Exception(lang('configuration_backup_status_data_not_available'));
-            else
-                $lines = array_reverse($lines);
-
-            foreach ($lines as $line)
-                $status[] = json_decode($line);
-            
-            return $status;
-        } catch (Exception $e) {
-            return '...';
-            // TODO: this gets triggered on a timing issue.
-            // throw new Engine_Exception(clearos_exception_message($e));
-        }
-    }
-
-    /**
-     * Resets status.
+     * Updates list of installed app RPMs.
      *
      * @throws Engine_Exception
      * @return void
      */
 
-    function reset_restore_status()
+    function update_installed_apps()
     {
         clearos_profile(__METHOD__, __LINE__);
 
-        $file = new File(CLEAROS_TEMP_DIR . "/" . self::FILE_STATUS);
+        $shell = new Shell();
+        $args = "-qa --queryformat='%{NAME}\n' | grep ^app- | sort";
+        $shell->execute(self::CMD_RPM, $args, TRUE);
+        $output = $shell->get_output();
+
+        $file = new File(self::FILE_INSTALLED_APPS);
+
         if ($file->exists())
             $file->delete();
+
+        $file->create('root', 'root', '0644');
+        $file->add_lines(implode($output, "\n") . "\n");
     }
 
     ///////////////////////////////////////////////////////////////////////////////
@@ -985,7 +1006,7 @@ class Configuration_Backup extends Engine
      * @return string error message if filename is invalid
      */
 
-    public function validate_filename($filename)
+    function validate_filename($filename)
     {
         clearos_profile(__METHOD__, __LINE__);
 
@@ -1059,28 +1080,6 @@ class Configuration_Backup extends Engine
         }
 
         return $files;
-    }
-
-    /**
-     * Put the backup file in the cache directory, ready for import begin.
-     *
-     * @param string $filename filename
-     *
-     * @filename string backup filename
-     * @return void
-     * @throws Engine_Exception, File_Not_Found_Exception
-     */
-
-    function set_backup_file($filename)
-    {
-        clearos_profile(__METHOD__, __LINE__);
-
-        $file = new File(CLEAROS_TEMP_DIR . '/' . $filename, TRUE);
-
-        // Move uploaded file to cache
-        $file->move_to(self::FOLDER_UPLOAD . '/' . $filename);
-        $file->chown('root', 'root'); 
-        $file->chmod(600);
     }
 }
 
