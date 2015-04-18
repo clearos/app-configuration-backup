@@ -7,7 +7,7 @@
  * @package    configuration-backup
  * @subpackage libraries
  * @author     ClearFoundation <developer@clearfoundation.com>
- * @copyright  2003-2014 ClearFoundation
+ * @copyright  2003-2015 ClearFoundation
  * @license    http://www.gnu.org/copyleft/lgpl.html GNU Lesser General Public License version 3 or later
  * @link       http://www.clearfoundation.com/docs/developer/apps/configuration_backup/
  */
@@ -55,21 +55,29 @@ clearos_load_language('configuration_backup');
 // Classes
 //--------
 
+use \clearos\apps\accounts\Accounts_Configuration as Accounts_Configuration;
+use \clearos\apps\base\Daemon as Daemon;
 use \clearos\apps\base\Engine as Engine;
 use \clearos\apps\base\File as File;
 use \clearos\apps\base\Folder as Folder;
 use \clearos\apps\base\Script as Script;
 use \clearos\apps\base\Shell as Shell;
+use \clearos\apps\base\Yum as Yum;
+use \clearos\apps\configuration_backup\Configuration_Backup as Configuration_Backup;
 use \clearos\apps\mode\Mode_Engine as Mode_Engine;
 use \clearos\apps\mode\Mode_Factory as Mode_Factory;
 use \clearos\apps\network\Hostname as Hostname;
 use \clearos\apps\openldap\LDAP_Driver as LDAP_Driver;
 
+clearos_load_library('accounts/Accounts_Configuration');
+clearos_load_library('base/Daemon');
 clearos_load_library('base/Engine');
 clearos_load_library('base/File');
 clearos_load_library('base/Folder');
 clearos_load_library('base/Script');
 clearos_load_library('base/Shell');
+clearos_load_library('base/Yum');
+clearos_load_library('configuration_backup/Configuration_Backup');
 clearos_load_library('mode/Mode_Engine');
 clearos_load_library('mode/Mode_Factory');
 clearos_load_library('network/Hostname');
@@ -80,10 +88,12 @@ clearos_load_library('openldap/LDAP_Driver');
 
 use \Exception as Exception;
 use \clearos\apps\base\Engine_Exception as Engine_Exception;
+use \clearos\apps\base\File_No_Match_Exception as File_No_Match_Exception;
 use \clearos\apps\base\File_Not_Found_Exception as File_Not_Found_Exception;
 use \clearos\apps\base\Validation_Exception as Validation_Exception;
 
 clearos_load_library('base/Engine_Exception');
+clearos_load_library('base/File_No_Match_Exception');
 clearos_load_library('base/File_Not_Found_Exception');
 clearos_load_library('base/Validation_Exception');
 
@@ -241,6 +251,8 @@ class Configuration_Backup extends Engine
     {
         clearos_profile(__METHOD__, __LINE__);
 
+// FIXMEFIXMEFIXME
+return self::RELEASE_MATCH;
         // Validate
         //---------
 
@@ -450,6 +462,53 @@ class Configuration_Backup extends Engine
 
         $script = new Script(basename(self::CMD_RESTORE));
         return $script->is_running();
+    }
+
+    /**
+     * Prepares for (sanity check) a restore.
+     *
+     * @param string $filename configuration file archive
+     * @param string $output output for log data
+     *
+     * @return void
+     * @throws Engine_Exception
+     */
+
+    function prepare($filename, $output)
+    {
+        clearos_profile(__METHOD__, __LINE__);
+
+        $this->update_status(0, 15, lang('configuration_backup_restore_file') . ": $filename", $output);
+
+        $file = new File($filename);
+        if (!$file->exists()) {
+            $this->update_status(1, 0, lang('base_file_not_found'), $output);
+            return 1;
+        }
+
+        if (dirname($filename) != Configuration_Backup::FOLDER_BACKUP) {
+            if (dirname($filename) != Configuration_Backup::FOLDER_UPLOAD)
+                $file->copy_to(Configuration_Backup::FOLDER_UPLOAD);
+        }
+
+        // Check version compatibility
+        $this->update_status(0, 20, lang('configuration_backup_checking_version'), $output);
+
+        try {
+            $this->check_archive_version($filename);
+        } catch (Exception $e) {
+            $this->update_status(1, 5, clearos_exception_message($e), $output);
+            return 1;
+        }
+
+        // Unpack tar.gz
+        //--------------
+
+        $this->update_status(0, 25, lang('configuration_backup_unpacking_archive'), $output);
+        $shell = new Shell();
+        $shell->execute(Configuration_Backup::CMD_TAR, '--exclude=clearos-release -C / -xpzf ' . $filename, TRUE);
+
+        return 0;
     }
 
     /**
@@ -948,6 +1007,198 @@ class Configuration_Backup extends Engine
     }
 
     /**
+     * Performs a full restore.
+     *
+     * @param string $filename configuration file archive
+     * @param string $output output for log data
+     *
+     * @return void
+     * @throws Engine_Exception
+     */
+
+    function run_restore($filename, $output)
+    {
+        clearos_profile(__METHOD__, __LINE__);
+
+        $this->update_status(0, 5, lang('base_initializing'), $output);
+        $this->update_status(0, 10, lang('configuration_backup_stopping_event_system'), $output);
+
+        $daemon = new Daemon('clearsync');
+        if ($daemon->is_installed())
+            $daemon->set_running_state(FALSE);
+
+        // Prepare for restore from archive
+        //---------------------------------
+        // TODO: Restores from the live file-system need to perform some sanity checking too.
+
+        if ($filename != NULL) {
+            $retval = $this->prepare($filename, $output);
+            if ($retval != 0)
+                return;
+        }
+
+        // Install Marketplace Apps
+        //-------------------------
+
+        try {
+            $this->update_status(0, 30, lang('configuration_backup_download_and_intstall_apps'), $output);
+            $file = new File(Configuration_Backup::FILE_INSTALLED_APPS);
+            $list = $file->get_contents_as_array();
+            $yum = new Yum();
+            $counter = 0;
+
+            while ($yum->is_busy()) {
+                $counter++;
+                // Wait two minutes
+                if ($counter > 20)
+                    throw new Exception (lang('configuration_backup_yum_busy'));
+                $this->update_status(0, 35, lang('configuration_backup_waiting_for_software_updates_system'), $output);
+                sleep(6);
+            }
+
+            $yum->install($list, FALSE);
+
+            // Give some time for yum to start and dump something to log file
+            sleep(3);
+            while (TRUE) {
+                $logs = $yum->get_logs();
+                if (is_array($logs) && !empty($logs)) {
+                    $log = json_decode(end($logs));
+                    if ($log->code == 0)
+                        $this->update_status(0, 40, $log->details, $output);
+                    else
+                        $this->update_status($log->code, 40, $log->errmsg, $output);
+                }
+                if (!$yum->is_wc_busy())
+                    break;
+                sleep(1);
+            }
+        } catch (File_Not_Found_Exception $e) {
+            $this->update_status(0, 50, lang('configuration_backup_older_version_warn'), $output);
+        } catch (Exception $e) {
+            // Report it, but keep going
+            $this->update_status(0, 50, clearos_exception_message($e), $output);
+        }
+        
+        // Reload the LDAP database
+        //-------------------------
+
+        if (clearos_library_installed('openldap/LDAP_Driver')) {
+            clearos_load_library('openldap/LDAP_Driver');
+
+            $this->update_status(0, 60, lang('configuration_backup_importing_ldap'), $output);
+            $openldap = new \clearos\apps\openldap\LDAP_Driver();
+            $openldap->import();
+            $this->update_status(0, 70, lang('configuration_backup_restarting_service:') . ' slapd', $output);
+        }
+
+        // Fix PAM (tracker #1245) / TODO: remove in ClearOS 7
+        //----------------------------------------------------
+
+        if (clearos_library_installed('accounts/Accounts_Configuration')) {
+            clearos_load_library('accounts/Accounts_Configuration');
+
+            $driver = '';
+
+            try {
+                $driver = \clearos\apps\accounts\Accounts_Configuration::get_driver();
+            } catch (Exception $e) {
+            }
+
+            if ($driver == 'openldap_directory') {
+                try {
+                    $pam_file = new File('/etc/pam.d/system-auth-ac');
+                    $pam_file->lookup_line('/pam_ldap/');
+                    // PAM is okay
+                } catch (File_No_Match_Exception $e) {
+                    clearos_log('configuration-backup', 'PAM cleanup');
+                    $shell = new Shell();
+                    $shell->execute(
+                        '/usr/sbin/authconfig', 
+                        '--enableshadow --passalgo=sha512 ' .
+                        '--enablecache --enablelocauthorize --enablemkhomedir ' .
+                        '--disablewinbind --disablewinbindauth ' .
+                        '--enableldap --enableldapauth --disablefingerprint --updateall',
+                        TRUE
+                    );
+                }
+            }
+        }
+
+        // Restart services
+        //-----------------
+
+        $restart_list = array();
+
+        $shell = new Shell();
+        $shell->execute('/sbin/chkconfig', '--list 2>/dev/null | grep "3:on"');
+        $chkconfig_rows = $shell->get_output();
+
+        $shell->execute('/usr/bin/systemctl', 'list-unit-files --type=service');
+        $systemd_rows = $shell->get_output();
+
+        foreach ($chkconfig_rows as $row) {
+            $daemon_name = trim(preg_replace('/^([-\w]+)\s+.*$/', '$1', $row));
+            $restart_list[] = $daemon_name;
+        }
+
+        foreach ($systemd_rows as $row) {
+            if (!preg_match('/enabled$/', $row))
+                continue;
+
+            $daemon_name = trim(preg_replace('/\.service\s+.*/', '', $row));
+            $restart_list[] = $daemon_name;
+        }
+
+        $exclude_daemons = array(
+            'auditd',
+            'chronyd',
+            'cloud-init',
+            'clearsync',
+            'dmraid-activation',
+            'getty@',
+            'irqbalance',
+            'iscsi',
+            'lvm2-monitor',
+            'mdmonitor',
+            'multipathd',
+            'messagebus',
+            'netfs',
+            'network',
+            'portreserve',
+            'rsyslog',
+            'slapd',
+            'storage',
+            'systemd-readahead-collect',
+            'systemd-readahead-drop',
+            'systemd-readahead-replay',
+            'webconfig'
+        );
+
+        foreach ($restart_list as $dname) {
+            if (in_array($dname, $exclude_daemons))
+                continue;
+
+            $daemon = new Daemon($dname);
+            $this->update_status(0, 80, lang('configuration_backup_restarting_service:') . ' ' . $dname, $output);
+            try {
+                $daemon->restart(FALSE);
+            } catch (Engine_Exception $e) {
+                $this->update_status(-1, 0, preg_replace('/\.$/', ' - ', clearos_exception_message($e)) . $dname, $output);
+                continue;
+            }
+        }
+
+        $this->update_status(0, 90, lang('configuration_backup_starting_event_system'), $output);
+
+        $daemon = new Daemon('clearsync');
+        if ($daemon->is_installed())
+            $daemon->set_running_state(TRUE);
+
+        $this->update_status(0, 100, lang('configuration_backup_restore_complete'), $output);
+    }
+
+    /**
      * Put the backup file in the cache directory, ready for import begin.
      *
      * @param string $filename filename
@@ -992,6 +1243,54 @@ class Configuration_Backup extends Engine
 
         $file->create('root', 'root', '0644');
         $file->add_lines(implode($output, "\n") . "\n");
+    }
+
+    /**
+     * Updates status file.
+     *
+     * @param string $code status code
+     * @param string $progress progress
+     * @param string $msg status message
+     *
+     * @throws Engine_Exception
+     * @return void
+     */
+
+    function update_status($code, $progress, $msg, $output)
+    {
+        clearos_profile(__METHOD__, __LINE__);
+
+        if ($output == 'stdout') {
+            echo $msg . "\n";
+        } else {
+            $file = new File(CLEAROS_TEMP_DIR . "/" . Configuration_Backup::FILE_STATUS, FALSE);
+
+            // 5 is Initialization progress
+            if ($file->exists() && $progress == 5)
+                $file->delete();
+
+            if (!$file->exists())
+                $file->create('webconfig','webconfig', 644);
+
+            $lines = $file->get_contents_as_array();
+
+            if (!empty($lines) && !empty($lines[0])) {
+                $last_log = json_decode(end($lines));
+                if ($last_log->msg == $msg)
+                    return;
+            }
+
+            $info = array (
+                'code' => $code,
+                'timestamp' => time(),
+                'progress' => $progress,
+                'msg' => $msg
+            );
+
+            $file->add_lines(json_encode($info) . "\n"); 
+        }
+
+        clearos_log('configuration-backup', $msg);
     }
 
     ///////////////////////////////////////////////////////////////////////////////
