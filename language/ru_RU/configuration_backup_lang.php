@@ -3,7 +3,7 @@
 // http://www.clearfoundation.com/docs/developer/translations/
 
 $lang['configuration_backup_app_description'] = 'The configuration backup and restore app allows an administrator to take a snapshot (archive file) of all configuration settings of the system, allowing easy restoration in the event data is lost.';
-$lang['configuration_backup_app_name'] = 'Настройка Бэкапов';
+$lang['configuration_backup_app_name'] = 'Configuration Backup and Restore';
 $lang['configuration_backup_archives'] = 'Архивы';
 $lang['configuration_backup_backup_file_invalid'] = 'Резервное имя файла - инвалид.';
 $lang['configuration_backup_backup_now'] = 'Резервное копирование сейчас';
