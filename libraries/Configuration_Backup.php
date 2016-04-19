@@ -504,10 +504,57 @@ return self::RELEASE_MATCH;
         // Unpack tar.gz
         //--------------
 
+        $folder = new Folder(self::FOLDER_RESTORE);
+
+        if ($folder->exists())
+            $folder->delete(TRUE);
+
+        $folder->create('root', 'root', '0755');
+
         $this->update_status(0, 25, lang('configuration_backup_unpacking_archive'), $output);
         $shell = new Shell();
-        $shell->execute(Configuration_Backup::CMD_TAR, '--exclude=clearos-release -C / -xpzf ' . $filename, TRUE);
+        $shell->execute(Configuration_Backup::CMD_TAR, '--exclude=clearos-release -C ' . self::FOLDER_RESTORE . ' -xpzf ' . $filename, TRUE);
 
+	$folder_blacklist = array(
+		'/etc/mail/spamassassin/channel.d',
+		'/etc/mail/spamassassin/sa-update-keys',
+		'/etc/pam.d',
+		'/etc/ppp',
+		'/etc/sysconfig/network-scripts',
+		'/etc/snort.d',
+		'/etc/yum.repos.d',
+		'/usr/clearos/sandbox/etc/httpd',
+	);
+
+	$file_blacklist = array(
+		'/etc/amavisd.conf',
+		'/etc/suvad.conf',
+		'/etc/httpd/conf/httpd.conf',
+		'/etc/mail/spamassassin/app-mail-antispam.cf',
+		'/etc/mail/spamassassin/init.pre',
+		'/etc/mail/spamassassin/spamassassin-default.rc',
+		'/etc/mail/spamassassin/spamassassin-helper.sh',
+		'/etc/mail/spamassassin/spamassassin-spamc.rc',
+		'/etc/mail/spamassassin/v310.pre',
+		'/etc/mail/spamassassin/v312.pre',
+		'/etc/mail/spamassassin/v320.pre',
+		'/etc/mail/spamassassin/v330.pre',
+		'/etc/yum.conf',
+	);
+
+	foreach ($folder_blacklist as $folder_name) {
+		$folder = new Folder(self::FOLDER_RESTORE . '/' . $folder_name);
+		if ($folder->exists())
+		    $folder->delete(TRUE);
+	}
+
+	foreach ($file_blacklist as $file_name) {
+		$file = new File(self::FOLDER_RESTORE . '/' . $file_name, TRUE);
+		if ($file->exists())
+		    $file->delete();
+	}
+
+	exec("cp -av " . self::FOLDER_RESTORE . '/* /' );
         return 0;
     }
 
@@ -783,13 +830,6 @@ return self::RELEASE_MATCH;
             $netbios = $samba->get_netbios_name();
             $workgroup = $samba->get_workgroup();
 
-            // Disable old Samba settings, and then auto-configure the network interface info
-            $smb_conf = new File('/etc/samba/smb.conf');
-            $smb_conf->replace_lines('/^bind\s+interfaces\s+only\s*=/', "bind interfaces only = no\n");
-            $smb_conf->replace_lines('/^interfaces\s*=/', "interfaces = lo\n");
-            $smb_conf->replace_lines('/^smb\s+ports\s*/', '');
-            $samba->auto_configure();
-
             clearos_log('configuration-backup', 'initializing Samba directory');
             $samba_ldap = new \clearos\apps\samba\OpenLDAP_Driver();
             $samba_ldap->initialize(TRUE, $workgroup);
@@ -944,8 +984,6 @@ return self::RELEASE_MATCH;
                 // Dump the rest of the attributes
                 if (in_array($key, $ignore_attributes_list) || in_array(trim($line), $ignore_attributes_list)) {
                     $keep_ignoring = TRUE;
-                    continue;
-                } else if (preg_match('/^pcnMailAliases:/', $line)) {
                     continue;
                 } else if (preg_match('/^pcnProxyFlag: TRUE/', $line)) {
                     $object_plugins[] = 'web_proxy';
