@@ -1239,6 +1239,7 @@ return self::RELEASE_MATCH;
             'cloud-init',
             'clearsync',
             'dmraid-activation',
+            'kdump',
             'getty@',
             'irqbalance',
             'iscsi',
