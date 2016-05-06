@@ -58,15 +58,25 @@ if ($restore_ready) {
 ///////////////////////////////////////////////////////////////////////////////
 
 if ($upload_error)
-    echo infobox_warning('adfd', $upload_error);
+    echo infobox_warning(lang('base_warning'), $upload_error);
+
 
 echo form_open_multipart('configuration_backup/restore');
 echo form_header(lang('configuration_backup_restore_from_archive'), array('id' => 'upload_form'));
 
+// echo fieldset_header(lang('configuration_backup_file_information'));
 echo field_file('restore_file', $filename, lang('configuration_backup_restore_file'), $restore_ready);
-
 if ($restore_ready)
     echo field_file('size', $size, lang('base_file_size'), $restore_ready);
+// echo fieldset_footer();
+
+/*
+Do this in another git branch.
+if ($restore_ready) {
+    echo fieldset_header(lang('configuration_backup_network_information'));
+    echo fieldset_footer();
+}
+*/
 
 echo field_button_set($buttons);
 

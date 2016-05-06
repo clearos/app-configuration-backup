@@ -516,6 +516,7 @@ return self::RELEASE_MATCH;
         $shell->execute(Configuration_Backup::CMD_TAR, '--exclude=clearos-release -C ' . self::FOLDER_RESTORE . ' -xpzf ' . $filename, TRUE);
 
         $folder_exclude = array(
+            '/etc/dnsmasq.d',
             '/etc/mail/spamassassin/channel.d',
             '/etc/mail/spamassassin/sa-update-keys',
             '/etc/pam.d',
@@ -528,7 +529,7 @@ return self::RELEASE_MATCH;
 
         $file_exclude = array(
             '/etc/amavisd.conf',
-            '/etc/suvad.conf',
+            '/etc/clearos/network.conf',
             '/etc/httpd/conf/httpd.conf',
             '/etc/mail/spamassassin/app-mail-antispam.cf',
             '/etc/mail/spamassassin/init.pre',
@@ -539,6 +540,8 @@ return self::RELEASE_MATCH;
             '/etc/mail/spamassassin/v312.pre',
             '/etc/mail/spamassassin/v320.pre',
             '/etc/mail/spamassassin/v330.pre',
+            '/etc/suvad.conf',
+            '/etc/sysconfig/network',
             '/etc/yum.conf',
         );
 

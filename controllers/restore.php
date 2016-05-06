@@ -96,7 +96,6 @@ class Restore extends ClearOS_Controller
             return;
         }
 
-
         // Load views
         //-----------
 
