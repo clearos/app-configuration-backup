@@ -515,7 +515,7 @@ return self::RELEASE_MATCH;
         $shell = new Shell();
         $shell->execute(Configuration_Backup::CMD_TAR, '--exclude=clearos-release -C ' . self::FOLDER_RESTORE . ' -xpzf ' . $filename, TRUE);
 
-    $folder_blacklist = array(
+    $folder_exclude = array(
         '/etc/mail/spamassassin/channel.d',
         '/etc/mail/spamassassin/sa-update-keys',
         '/etc/pam.d',
@@ -526,7 +526,7 @@ return self::RELEASE_MATCH;
         '/usr/clearos/sandbox/etc/httpd',
     );
 
-    $file_blacklist = array(
+    $file_exclude = array(
         '/etc/amavisd.conf',
         '/etc/suvad.conf',
         '/etc/httpd/conf/httpd.conf',
@@ -542,13 +542,13 @@ return self::RELEASE_MATCH;
         '/etc/yum.conf',
     );
 
-    foreach ($folder_blacklist as $folder_name) {
+    foreach ($folder_exclude as $folder_name) {
         $folder = new Folder(self::FOLDER_RESTORE . '/' . $folder_name);
         if ($folder->exists())
             $folder->delete(TRUE);
     }
 
-    foreach ($file_blacklist as $file_name) {
+    foreach ($file_exclude as $file_name) {
         $file = new File(self::FOLDER_RESTORE . '/' . $file_name, TRUE);
         if ($file->exists())
             $file->delete();
