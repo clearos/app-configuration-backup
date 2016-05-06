@@ -830,6 +830,13 @@ return self::RELEASE_MATCH;
             $netbios = $samba->get_netbios_name();
             $workgroup = $samba->get_workgroup();
 
+            // Disable old Samba settings, and then auto-configure the network interface info
+            $smb_conf = new File('/etc/samba/smb.conf');
+            $smb_conf->replace_lines('/^bind\s+interfaces\s+only\s*=/', "bind interfaces only = no\n");
+            $smb_conf->replace_lines('/^interfaces\s*=/', "interfaces = lo\n");
+            $smb_conf->replace_lines('/^smb\s+ports\s*/', '');
+            $samba->auto_configure();
+
             clearos_log('configuration-backup', 'initializing Samba directory');
             $samba_ldap = new \clearos\apps\samba\OpenLDAP_Driver();
             $samba_ldap->initialize(TRUE, $workgroup);
@@ -984,6 +991,8 @@ return self::RELEASE_MATCH;
                 // Dump the rest of the attributes
                 if (in_array($key, $ignore_attributes_list) || in_array(trim($line), $ignore_attributes_list)) {
                     $keep_ignoring = TRUE;
+                    continue;
+                } else if (preg_match('/^pcnMailAliases:/', $line)) {
                     continue;
                 } else if (preg_match('/^pcnProxyFlag: TRUE/', $line)) {
                     $object_plugins[] = 'web_proxy';
