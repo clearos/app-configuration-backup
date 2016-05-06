@@ -515,46 +515,46 @@ return self::RELEASE_MATCH;
         $shell = new Shell();
         $shell->execute(Configuration_Backup::CMD_TAR, '--exclude=clearos-release -C ' . self::FOLDER_RESTORE . ' -xpzf ' . $filename, TRUE);
 
-	$folder_blacklist = array(
-		'/etc/mail/spamassassin/channel.d',
-		'/etc/mail/spamassassin/sa-update-keys',
-		'/etc/pam.d',
-		'/etc/ppp',
-		'/etc/sysconfig/network-scripts',
-		'/etc/snort.d',
-		'/etc/yum.repos.d',
-		'/usr/clearos/sandbox/etc/httpd',
-	);
+    $folder_blacklist = array(
+        '/etc/mail/spamassassin/channel.d',
+        '/etc/mail/spamassassin/sa-update-keys',
+        '/etc/pam.d',
+        '/etc/ppp',
+        '/etc/sysconfig/network-scripts',
+        '/etc/snort.d',
+        '/etc/yum.repos.d',
+        '/usr/clearos/sandbox/etc/httpd',
+    );
 
-	$file_blacklist = array(
-		'/etc/amavisd.conf',
-		'/etc/suvad.conf',
-		'/etc/httpd/conf/httpd.conf',
-		'/etc/mail/spamassassin/app-mail-antispam.cf',
-		'/etc/mail/spamassassin/init.pre',
-		'/etc/mail/spamassassin/spamassassin-default.rc',
-		'/etc/mail/spamassassin/spamassassin-helper.sh',
-		'/etc/mail/spamassassin/spamassassin-spamc.rc',
-		'/etc/mail/spamassassin/v310.pre',
-		'/etc/mail/spamassassin/v312.pre',
-		'/etc/mail/spamassassin/v320.pre',
-		'/etc/mail/spamassassin/v330.pre',
-		'/etc/yum.conf',
-	);
+    $file_blacklist = array(
+        '/etc/amavisd.conf',
+        '/etc/suvad.conf',
+        '/etc/httpd/conf/httpd.conf',
+        '/etc/mail/spamassassin/app-mail-antispam.cf',
+        '/etc/mail/spamassassin/init.pre',
+        '/etc/mail/spamassassin/spamassassin-default.rc',
+        '/etc/mail/spamassassin/spamassassin-helper.sh',
+        '/etc/mail/spamassassin/spamassassin-spamc.rc',
+        '/etc/mail/spamassassin/v310.pre',
+        '/etc/mail/spamassassin/v312.pre',
+        '/etc/mail/spamassassin/v320.pre',
+        '/etc/mail/spamassassin/v330.pre',
+        '/etc/yum.conf',
+    );
 
-	foreach ($folder_blacklist as $folder_name) {
-		$folder = new Folder(self::FOLDER_RESTORE . '/' . $folder_name);
-		if ($folder->exists())
-		    $folder->delete(TRUE);
-	}
+    foreach ($folder_blacklist as $folder_name) {
+        $folder = new Folder(self::FOLDER_RESTORE . '/' . $folder_name);
+        if ($folder->exists())
+            $folder->delete(TRUE);
+    }
 
-	foreach ($file_blacklist as $file_name) {
-		$file = new File(self::FOLDER_RESTORE . '/' . $file_name, TRUE);
-		if ($file->exists())
-		    $file->delete();
-	}
+    foreach ($file_blacklist as $file_name) {
+        $file = new File(self::FOLDER_RESTORE . '/' . $file_name, TRUE);
+        if ($file->exists())
+            $file->delete();
+    }
 
-	exec("cp -av " . self::FOLDER_RESTORE . '/* /' );
+        exec("cp -av " . self::FOLDER_RESTORE . '/* /' );
         return 0;
     }
 
