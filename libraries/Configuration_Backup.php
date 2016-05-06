@@ -559,6 +559,29 @@ return self::RELEASE_MATCH;
 
         exec("cp -av " . self::FOLDER_RESTORE . '/* /' );
 
+        // Workaround for tracker #683
+        //----------------------------
+
+        $source_file = new File('/usr/clearos/apps/openldap/deploy/provision/DB_CONFIG.template');
+
+        try {
+            if ($source_file->exists()) {
+                $target_file = new File('/var/lib/ldap/DB_CONFIG');
+                if (!$target_file->exists()) {
+                    $source_file->copy_to('/var/lib/ldap/DB_CONFIG');
+                    $target_file->chown('ldap', 'ldap');
+                }
+
+                $target_file = new File('/var/lib/ldap/accesslog/DB_CONFIG');
+                if (!$target_file->exists()) {
+                    $source_file->copy_to('/var/lib/ldap/accesslog/DB_CONFIG');
+                    $target_file->chown('ldap', 'ldap');
+                }
+            }
+        } catch (Exception $e) {
+            // Nnt fatal
+        }
+
         return 0;
     }
 
