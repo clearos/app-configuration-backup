@@ -251,8 +251,6 @@ class Configuration_Backup extends Engine
     {
         clearos_profile(__METHOD__, __LINE__);
 
-// FIXMEFIXMEFIXME
-return self::RELEASE_MATCH;
         // Validate
         //---------
 
@@ -294,19 +292,24 @@ return self::RELEASE_MATCH;
 
         $retval = $shell->execute(self::CMD_TAR, "-O -C /var/tmp -xzf $full_path $release_found", TRUE);
 
-        $archive_version = trim($shell->get_first_output_line());
+        $matches = array();
+        $archive_base_version = '';
+
+        $archive_full_version = trim($shell->get_first_output_line());
+        if (preg_match('/.* ([0-9\.]+) .*/', $archive_full_version, $matches)) {
+            $archive_version = $matches[1];
+            $archive_base_version = preg_replace('/\..*/', '', $archive_version);
+        }
 
         $file = new File('/etc/clearos-release');
         $current_version = trim($file->get_contents());
 
-        if ($current_version == $archive_version) {
-            return self::RELEASE_MATCH;
-        } else if (preg_match('/release 5.2/', $archive_version)) {
-            return self::RELEASE_UPGRADE_52;
-        } else {
-            $error = lang('configuration_backup_release_mismatch') . ' (' . $archive_version . ')';
+        if ($archive_base_version == '5') {
+            $error = lang('configuration_backup_release_unsupported:') . $archive_version;
             throw new Engine_Exception($error, CLEAROS_ERROR);
         }
+
+        return self::RELEASE_MATCH;
     }
 
     /**
@@ -501,63 +504,16 @@ return self::RELEASE_MATCH;
             return 1;
         }
 
-        // Unpack tar.gz
-        //--------------
-
-        $folder = new Folder(self::FOLDER_RESTORE);
-
-        if ($folder->exists())
-            $folder->delete(TRUE);
-
-        $folder->create('root', 'root', '0755');
+        // Install files from backup
+        //
+        // With some apps, it is best to have the configuration file in
+        // place (e.g. /etc/hosts) before doing the restore.  So we restore
+        // the backup files both before and after the install process.
+        //------------------------------------------------------------------
 
         $this->update_status(0, 25, lang('configuration_backup_unpacking_archive'), $output);
-        $shell = new Shell();
-        $shell->execute(Configuration_Backup::CMD_TAR, '--exclude=clearos-release -C ' . self::FOLDER_RESTORE . ' -xpzf ' . $filename, TRUE);
 
-        $folder_exclude = array(
-            '/etc/dnsmasq.d',
-            '/etc/mail/spamassassin/channel.d',
-            '/etc/mail/spamassassin/sa-update-keys',
-            '/etc/pam.d',
-            '/etc/ppp',
-            '/etc/sysconfig/network-scripts',
-            '/etc/snort.d',
-            '/etc/yum.repos.d',
-            '/usr/clearos/sandbox/etc/httpd',
-        );
-
-        $file_exclude = array(
-            '/etc/amavisd.conf',
-            '/etc/clearos/network.conf',
-            '/etc/httpd/conf/httpd.conf',
-            '/etc/mail/spamassassin/app-mail-antispam.cf',
-            '/etc/mail/spamassassin/init.pre',
-            '/etc/mail/spamassassin/spamassassin-default.rc',
-            '/etc/mail/spamassassin/spamassassin-helper.sh',
-            '/etc/mail/spamassassin/spamassassin-spamc.rc',
-            '/etc/mail/spamassassin/v310.pre',
-            '/etc/mail/spamassassin/v312.pre',
-            '/etc/mail/spamassassin/v320.pre',
-            '/etc/mail/spamassassin/v330.pre',
-            '/etc/suvad.conf',
-            '/etc/sysconfig/network',
-            '/etc/yum.conf',
-        );
-
-        foreach ($folder_exclude as $folder_name) {
-            $folder = new Folder(self::FOLDER_RESTORE . '/' . $folder_name);
-            if ($folder->exists())
-                $folder->delete(TRUE);
-        }
-
-        foreach ($file_exclude as $file_name) {
-            $file = new File(self::FOLDER_RESTORE . '/' . $file_name, TRUE);
-            if ($file->exists())
-                $file->delete();
-        }
-
-        exec("cp -av " . self::FOLDER_RESTORE . '/* /' );
+        $this->_install_files($filename);
 
         // Workaround for tracker #683
         //----------------------------
@@ -1139,6 +1095,7 @@ return self::RELEASE_MATCH;
                 sleep(6);
             }
 
+            $yum->clean();
             $yum->install($list, FALSE);
 
             // Give some time for yum to start and dump something to log file
@@ -1163,6 +1120,11 @@ return self::RELEASE_MATCH;
             $this->update_status(0, 50, clearos_exception_message($e), $output);
         }
         
+        // Install files from backup
+        //--------------------------
+
+        $this->_install_files($filename);
+
         // Reload the LDAP database
         //-------------------------
 
@@ -1463,6 +1425,76 @@ return self::RELEASE_MATCH;
         }
 
         return $files;
+    }
+
+    /**
+     * Install files.
+     *
+     * @param string $filename configuration file archive
+     *
+     * @access private
+     * @return void
+     * @throws Engine_Exception
+     */
+
+    private function _install_files($filename)
+    {
+        clearos_profile(__METHOD__, __LINE__);
+
+        $folder = new Folder(self::FOLDER_RESTORE);
+
+        if ($folder->exists())
+            $folder->delete(TRUE);
+
+        $folder->create('root', 'root', '0755');
+
+        $shell = new Shell();
+        $shell->execute(Configuration_Backup::CMD_TAR, '--exclude=clearos-release -C ' . self::FOLDER_RESTORE . ' -xpzf ' . $filename, TRUE);
+
+        $folder_exclude = array(
+            '/etc/dnsmasq.d',
+            '/etc/mail/spamassassin/channel.d',
+            '/etc/mail/spamassassin/sa-update-keys',
+            '/etc/pam.d',
+            '/etc/ppp',
+            '/etc/sysconfig/network-scripts',
+            '/etc/snort.d',
+            '/etc/yum.repos.d',
+            '/usr/clearos/sandbox/etc/httpd',
+        );
+
+        $file_exclude = array(
+            '/etc/amavisd.conf',
+            '/etc/clearos/network.conf',
+            '/etc/httpd/conf/httpd.conf',
+            '/etc/mail/spamassassin/app-mail-antispam.cf',
+            '/etc/mail/spamassassin/init.pre',
+            '/etc/mail/spamassassin/spamassassin-default.rc',
+            '/etc/mail/spamassassin/spamassassin-helper.sh',
+            '/etc/mail/spamassassin/spamassassin-spamc.rc',
+            '/etc/mail/spamassassin/v310.pre',
+            '/etc/mail/spamassassin/v312.pre',
+            '/etc/mail/spamassassin/v320.pre',
+            '/etc/mail/spamassassin/v330.pre',
+            '/etc/suvad.conf',
+            '/etc/sysconfig/network',
+            '/etc/yum.conf',
+        );
+
+        foreach ($folder_exclude as $folder_name) {
+            $folder = new Folder(self::FOLDER_RESTORE . '/' . $folder_name);
+            if ($folder->exists())
+                $folder->delete(TRUE);
+        }
+
+        foreach ($file_exclude as $file_name) {
+            $file = new File(self::FOLDER_RESTORE . '/' . $file_name, TRUE);
+            if ($file->exists())
+                $file->delete();
+        }
+
+        // FIXME: quick hack
+        exec("cp -av " . self::FOLDER_RESTORE . '/* /' );
     }
 }
 

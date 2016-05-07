@@ -17,6 +17,7 @@ $lang['configuration_backup_not_registered'] = 'Your system must be registered b
 $lang['configuration_backup_older_version_warn'] = 'Older versions do not include app install manifest - please install required apps from the Marketplace after restore';
 $lang['configuration_backup_release_mismatch'] = 'The version information in the backup file does not match the version installed on this system.';
 $lang['configuration_backup_release_missing'] = 'The version information is not available in the backup file.';
+$lang['configuration_backup_release_unsupported:'] = 'Restoring from the following version is not supported:';
 $lang['configuration_backup_restarting_service:'] = 'Restarting service:';
 $lang['configuration_backup_restore_already_in_progress'] = 'Restore in progress.';
 $lang['configuration_backup_restore_complete'] = 'Restore complete.';
@@ -30,3 +31,4 @@ $lang['configuration_backup_unable_to_start_restore'] = 'Unable to start restore
 $lang['configuration_backup_unpacking_archive'] = 'Unpacking archive file';
 $lang['configuration_backup_waiting_for_software_updates_system'] = 'Waiting for software updates system';
 $lang['configuration_backup_yum_busy'] = 'Package manager is busy.';
+
