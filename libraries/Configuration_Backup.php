@@ -135,8 +135,8 @@ class Configuration_Backup extends Engine
     const SIZE_LIMIT = 512000; // Maximum size of all archives
 
     const RELEASE_MATCH = 'match';
-    const RELEASE_MIGRATE = 'migrate';
-    const RELEASE_UPGRADE_52 = 'upgrade52';
+    const RELEASE_UPGRADE_6 = 'upgrade6';
+    const RELEASE_UPGRADE_5 = 'upgrade5';
 
     ///////////////////////////////////////////////////////////////////////////////
     // V A R I A B L E S
@@ -247,7 +247,7 @@ class Configuration_Backup extends Engine
      * @throws Engine_Exception, Validation_Exception
      */
 
-    function check_archive_version($full_path)
+    function get_restore_type($full_path)
     {
         clearos_profile(__METHOD__, __LINE__);
 
@@ -268,7 +268,6 @@ class Configuration_Backup extends Engine
         $files = $shell->get_output();
 
         $release_found = '';
-        $import_found = FALSE;
 
         foreach ($files as $file) {
             if (preg_match("/ etc\/clearos-release$/", $file))
@@ -276,14 +275,8 @@ class Configuration_Backup extends Engine
 
             if (preg_match("/ etc\/release$/", $file))
                 $release_found = 'etc/release';
-
-            if (preg_match("/ etc\/clearos\/base\/import$/", $file))
-                $import_found = TRUE;
         }
 
-        if ($import_found)
-            return self::RELEASE_MIGRATE;
-        
         if (empty($release_found))
             throw new Engine_Exception(lang('configuration_backup_release_missing'), CLEAROS_ERROR);
 
@@ -305,8 +298,11 @@ class Configuration_Backup extends Engine
         $current_version = trim($file->get_contents());
 
         if ($archive_base_version == '5') {
+            // return self::RELEASE_UPGRADE_5;
             $error = lang('configuration_backup_release_unsupported:') . $archive_version;
             throw new Engine_Exception($error, CLEAROS_ERROR);
+        } else if($archive_base_version == '6') {
+            return self::RELEASE_UPGRADE_6;
         }
 
         return self::RELEASE_MATCH;
@@ -465,80 +461,6 @@ class Configuration_Backup extends Engine
 
         $script = new Script(basename(self::CMD_RESTORE));
         return $script->is_running();
-    }
-
-    /**
-     * Prepares for (sanity check) a restore.
-     *
-     * @param string $filename configuration file archive
-     * @param string $output output for log data
-     *
-     * @return void
-     * @throws Engine_Exception
-     */
-
-    function prepare($filename, $output)
-    {
-        clearos_profile(__METHOD__, __LINE__);
-
-        $this->update_status(0, 15, lang('configuration_backup_restore_file') . ": $filename", $output);
-
-        $file = new File($filename);
-        if (!$file->exists()) {
-            $this->update_status(1, 0, lang('base_file_not_found'), $output);
-            return 1;
-        }
-
-        if (dirname($filename) != Configuration_Backup::FOLDER_BACKUP) {
-            if (dirname($filename) != Configuration_Backup::FOLDER_UPLOAD)
-                $file->copy_to(Configuration_Backup::FOLDER_UPLOAD);
-        }
-
-        // Check version compatibility
-        $this->update_status(0, 20, lang('configuration_backup_checking_version'), $output);
-
-        try {
-            $this->check_archive_version($filename);
-        } catch (Exception $e) {
-            $this->update_status(1, 5, clearos_exception_message($e), $output);
-            return 1;
-        }
-
-        // Install files from backup
-        //
-        // With some apps, it is best to have the configuration file in
-        // place (e.g. /etc/hosts) before doing the restore.  So we restore
-        // the backup files both before and after the install process.
-        //------------------------------------------------------------------
-
-        $this->update_status(0, 25, lang('configuration_backup_unpacking_archive'), $output);
-
-        $this->_install_files($filename);
-
-        // Workaround for tracker #683
-        //----------------------------
-
-        $source_file = new File('/usr/clearos/apps/openldap/deploy/provision/DB_CONFIG.template');
-
-        try {
-            if ($source_file->exists()) {
-                $target_file = new File('/var/lib/ldap/DB_CONFIG');
-                if (!$target_file->exists()) {
-                    $source_file->copy_to('/var/lib/ldap/DB_CONFIG');
-                    $target_file->chown('ldap', 'ldap');
-                }
-
-                $target_file = new File('/var/lib/ldap/accesslog/DB_CONFIG');
-                if (!$target_file->exists()) {
-                    $source_file->copy_to('/var/lib/ldap/accesslog/DB_CONFIG');
-                    $target_file->chown('ldap', 'ldap');
-                }
-            }
-        } catch (Exception $e) {
-            // Nnt fatal
-        }
-
-        return 0;
     }
 
     /**
@@ -1071,9 +993,62 @@ class Configuration_Backup extends Engine
         // TODO: Restores from the live file-system need to perform some sanity checking too.
 
         if ($filename != NULL) {
-            $retval = $this->prepare($filename, $output);
-            if ($retval != 0)
-                return;
+            $this->update_status(0, 15, lang('configuration_backup_restore_file') . ": $filename", $output);
+
+            $file = new File($filename);
+            if (!$file->exists()) {
+                $this->update_status(1, 0, lang('base_file_not_found'), $output);
+                return 1;
+            }
+
+            if (dirname($filename) != Configuration_Backup::FOLDER_BACKUP) {
+                if (dirname($filename) != Configuration_Backup::FOLDER_UPLOAD)
+                    $file->copy_to(Configuration_Backup::FOLDER_UPLOAD);
+            }
+
+            // Check version compatibility
+            $this->update_status(0, 20, lang('configuration_backup_checking_version'), $output);
+
+            try {
+                $restore_type = $this->get_restore_type($filename);
+            } catch (Exception $e) {
+                $this->update_status(1, 5, clearos_exception_message($e), $output);
+                return 1;
+            }
+
+            // Install files from backup
+            //
+            // With some apps, it is best to have the configuration file in
+            // place (e.g. /etc/hosts) before doing the restore.  So we restore
+            // the backup files both before and after the install process.
+            //------------------------------------------------------------------
+
+            $this->update_status(0, 25, lang('configuration_backup_unpacking_archive'), $output);
+
+            $this->_install_files($filename, $restore_type);
+
+            // Workaround for tracker #683
+            //----------------------------
+
+            $source_file = new File('/usr/clearos/apps/openldap/deploy/provision/DB_CONFIG.template');
+
+            try {
+                if ($source_file->exists()) {
+                    $target_file = new File('/var/lib/ldap/DB_CONFIG');
+                    if (!$target_file->exists()) {
+                        $source_file->copy_to('/var/lib/ldap/DB_CONFIG');
+                        $target_file->chown('ldap', 'ldap');
+                    }
+
+                    $target_file = new File('/var/lib/ldap/accesslog/DB_CONFIG');
+                    if (!$target_file->exists()) {
+                        $source_file->copy_to('/var/lib/ldap/accesslog/DB_CONFIG');
+                        $target_file->chown('ldap', 'ldap');
+                    }
+                }
+            } catch (Exception $e) {
+                // Nnt fatal
+            }
         }
 
         // Install Marketplace Apps
@@ -1123,7 +1098,10 @@ class Configuration_Backup extends Engine
         // Install files from backup
         //--------------------------
 
-        $this->_install_files($filename);
+        if ($filename != NULL) {
+            // Note: restore-type is set far above.  Sorry.
+            $this->_install_files($filename, $restore_type);
+        }
 
         // Reload the LDAP database
         //-------------------------
@@ -1430,14 +1408,15 @@ class Configuration_Backup extends Engine
     /**
      * Install files.
      *
-     * @param string $filename configuration file archive
+     * @param string  $filename configuration file archive
+     * @param boolean $type     restore type   
      *
      * @access private
      * @return void
      * @throws Engine_Exception
      */
 
-    private function _install_files($filename)
+    private function _install_files($filename, $type)
     {
         clearos_profile(__METHOD__, __LINE__);
 
@@ -1451,46 +1430,48 @@ class Configuration_Backup extends Engine
         $shell = new Shell();
         $shell->execute(Configuration_Backup::CMD_TAR, '--exclude=clearos-release -C ' . self::FOLDER_RESTORE . ' -xpzf ' . $filename, TRUE);
 
-        $folder_exclude = array(
-            '/etc/dnsmasq.d',
-            '/etc/mail/spamassassin/channel.d',
-            '/etc/mail/spamassassin/sa-update-keys',
-            '/etc/pam.d',
-            '/etc/ppp',
-            '/etc/sysconfig/network-scripts',
-            '/etc/snort.d',
-            '/etc/yum.repos.d',
-            '/usr/clearos/sandbox/etc/httpd',
-        );
+        if ($type === self::RELEASE_UPGRADE_6) {
+            $folder_exclude = array(
+                '/etc/dnsmasq.d',
+                '/etc/mail/spamassassin/channel.d',
+                '/etc/mail/spamassassin/sa-update-keys',
+                '/etc/pam.d',
+                '/etc/ppp',
+                '/etc/sysconfig/network-scripts',
+                '/etc/snort.d',
+                '/etc/yum.repos.d',
+                '/usr/clearos/sandbox/etc/httpd',
+            );
 
-        $file_exclude = array(
-            '/etc/amavisd.conf',
-            '/etc/clearos/network.conf',
-            '/etc/httpd/conf/httpd.conf',
-            '/etc/mail/spamassassin/app-mail-antispam.cf',
-            '/etc/mail/spamassassin/init.pre',
-            '/etc/mail/spamassassin/spamassassin-default.rc',
-            '/etc/mail/spamassassin/spamassassin-helper.sh',
-            '/etc/mail/spamassassin/spamassassin-spamc.rc',
-            '/etc/mail/spamassassin/v310.pre',
-            '/etc/mail/spamassassin/v312.pre',
-            '/etc/mail/spamassassin/v320.pre',
-            '/etc/mail/spamassassin/v330.pre',
-            '/etc/suvad.conf',
-            '/etc/sysconfig/network',
-            '/etc/yum.conf',
-        );
+            $file_exclude = array(
+                '/etc/amavisd.conf',
+                '/etc/clearos/network.conf',
+                '/etc/httpd/conf/httpd.conf',
+                '/etc/mail/spamassassin/app-mail-antispam.cf',
+                '/etc/mail/spamassassin/init.pre',
+                '/etc/mail/spamassassin/spamassassin-default.rc',
+                '/etc/mail/spamassassin/spamassassin-helper.sh',
+                '/etc/mail/spamassassin/spamassassin-spamc.rc',
+                '/etc/mail/spamassassin/v310.pre',
+                '/etc/mail/spamassassin/v312.pre',
+                '/etc/mail/spamassassin/v320.pre',
+                '/etc/mail/spamassassin/v330.pre',
+                '/etc/suvad.conf',
+                '/etc/sysconfig/network',
+                '/etc/yum.conf',
+            );
 
-        foreach ($folder_exclude as $folder_name) {
-            $folder = new Folder(self::FOLDER_RESTORE . '/' . $folder_name);
-            if ($folder->exists())
+            foreach ($folder_exclude as $folder_name) {
+                $folder = new Folder(self::FOLDER_RESTORE . '/' . $folder_name);
+                if ($folder->exists())
                 $folder->delete(TRUE);
-        }
+            }
 
-        foreach ($file_exclude as $file_name) {
-            $file = new File(self::FOLDER_RESTORE . '/' . $file_name, TRUE);
-            if ($file->exists())
-                $file->delete();
+            foreach ($file_exclude as $file_name) {
+                $file = new File(self::FOLDER_RESTORE . '/' . $file_name, TRUE);
+                if ($file->exists())
+                    $file->delete();
+            }
         }
 
         // FIXME: quick hack
