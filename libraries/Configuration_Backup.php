@@ -1464,6 +1464,8 @@ class Configuration_Backup extends Engine
                 '/etc/mail/spamassassin/v312.pre',
                 '/etc/mail/spamassassin/v320.pre',
                 '/etc/mail/spamassassin/v330.pre',
+                '/etc/raddb/clearos-clients.conf',
+                '/etc/raddb/clearos-users',
                 '/etc/suvad.conf',
                 '/etc/sysconfig/network',
                 '/etc/yum.conf',
