@@ -994,6 +994,8 @@ class Configuration_Backup extends Engine
         //---------------------------------
         // TODO: Restores from the live file-system need to perform some sanity checking too.
 
+        $restore_type = self::RELEASE_MATCH;
+
         if ($filename != NULL) {
             $this->update_status(0, 15, lang('configuration_backup_restore_file') . ": $filename", $output);
 
@@ -1013,6 +1015,7 @@ class Configuration_Backup extends Engine
 
             try {
                 $restore_type = $this->get_restore_type($filename);
+                $this->update_status(0, 20, lang('configuration_backup_restore_type:') . ' ' . $restore_type, $output);
             } catch (Exception $e) {
                 $this->update_status(1, 5, clearos_exception_message($e), $output);
                 return 1;
@@ -1097,14 +1100,6 @@ class Configuration_Backup extends Engine
             $this->update_status(0, 50, clearos_exception_message($e), $output);
         }
         
-        // Install files from backup
-        //--------------------------
-
-        if ($filename != NULL) {
-            // Note: restore-type is set far above.  Sorry.
-            $this->_install_files($filename, $restore_type);
-        }
-
         // Reload the LDAP database
         //-------------------------
 
@@ -1150,11 +1145,22 @@ class Configuration_Backup extends Engine
             }
         }
 
+        // Install files from backup
+        //--------------------------
+
+        if ($filename != NULL) {
+            // Note: restore-type is set far above.  Sorry.
+            clearos_log('configuration-backup', 'Restoring configuration files');
+            $this->_install_files($filename, $restore_type);
+        }
+
         // Run upgrade scripts
         //--------------------
 
-        if ($restore_type === self::RELEASE_UPGRADE_6)
+        if ($restore_type === self::RELEASE_UPGRADE_6) {
+            clearos_log('configuration-backup', 'Running app upgrades');
             $this->_run_upgrade_scripts();
+        }
 
         // Restart services
         //-----------------

@@ -24,6 +24,7 @@ $lang['configuration_backup_restore_complete'] = 'Restore complete.';
 $lang['configuration_backup_restore_file'] = 'Archive File';
 $lang['configuration_backup_restore_from_archive'] = 'Restore From Archive';
 $lang['configuration_backup_restore_log'] = 'Restore Log';
+$lang['configuration_backup_restore_type:'] = 'Restore type:';
 $lang['configuration_backup_starting_event_system'] = 'Starting event monitor service';
 $lang['configuration_backup_status_data_not_available'] = 'Status data not available.';
 $lang['configuration_backup_stopping_event_system'] = 'Stopping event monitor service';
