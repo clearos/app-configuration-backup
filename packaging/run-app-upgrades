@@ -1,0 +1,9 @@
+#!/bin/sh
+
+UPGRADE_SCRIPTS=`find /usr/clearos/apps -name upgrade | grep "deploy/upgrade"`
+
+for SCRIPT in $UPGRADE_SCRIPTS; do
+    BASENAME=`echo $SCRIPT | sed 's/\/usr\/clearos\/apps\///' | sed 's/\/deploy\/upgrade//'`
+    logger -p local6.notice -t installer "app-configuration-backup - checking upgrade for $BASENAME"
+    $SCRIPT
+done

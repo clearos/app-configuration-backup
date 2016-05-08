@@ -37,7 +37,7 @@ $app['requires'] = array(
 
 $app['core_requires'] = array(
     'app-base-core >= 1:1.5.32',
-    'app-network-core',
+    'app-network-core >= 1:2.2.4',
     'app-tasks-core'
 );
 
@@ -46,8 +46,10 @@ $app['core_file_manifest'] = array(
     'configuration-restore' => array(
         'target' => '/usr/sbin/configuration-restore',
         'mode' => '0755',
-        'owner' => 'root',
-        'group' => 'root',
+    ),
+    'run-app-upgrades' => array(
+        'target' => '/usr/sbin/run-app-upgrades',
+        'mode' => '0755',
     )
 );
 

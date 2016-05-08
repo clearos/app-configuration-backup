@@ -122,6 +122,7 @@ class Configuration_Backup extends Engine
     const FILE_CONFIG = 'backup.conf';
     const FILE_STATUS = 'configuration_backup.json';
     const FILE_INSTALLED_APPS = '/var/clearos/configuration_backup/installed_apps.txt';
+    const FOLDER_APPS = '/usr/clearos/apps';
     const FOLDER_BACKUP = '/var/clearos/configuration_backup';
     const FOLDER_UPLOAD = '/var/clearos/configuration_backup/upload';
     const FOLDER_RESTORE = '/var/clearos/configuration_backup/restore';
@@ -130,6 +131,7 @@ class Configuration_Backup extends Engine
     const CMD_LS = '/bin/ls';
     const CMD_RESTORE = '/usr/sbin/configuration-restore';
     const CMD_PS = '/bin/ps';
+    const CMD_RUN_APP_UPGRADES = '/usr/sbin/run-app-upgrades';
 
     const FILE_LIMIT = 10; // Maximum number of archives to keep
     const SIZE_LIMIT = 512000; // Maximum size of all archives
@@ -1148,6 +1150,12 @@ class Configuration_Backup extends Engine
             }
         }
 
+        // Run upgrade scripts
+        //--------------------
+
+        if ($restore_type === self::RELEASE_UPGRADE_6)
+            $this->_run_upgrade_scripts();
+
         // Restart services
         //-----------------
 
@@ -1474,8 +1482,27 @@ class Configuration_Backup extends Engine
             }
         }
 
-        // FIXME: quick hack
         exec("cp -av " . self::FOLDER_RESTORE . '/* /' );
+    }
+
+    /**
+     * Run upgrade scripts in apps.
+     *
+     * @access private
+     * @return void
+     * @throws Engine_Exception
+     */
+
+    // private function _run_upgrade_scripts()
+    public function _run_upgrade_scripts()
+    {
+        $shell = new Shell();
+
+        try {
+            $shell->execute(self::CMD_RUN_APP_UPGRADES, NULL, TRUE);
+        } catch (Exception $ignore) {
+            // Not fatal
+        }
     }
 }
 

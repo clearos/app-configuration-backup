@@ -21,7 +21,7 @@ License: LGPLv3
 Group: ClearOS/Libraries
 Requires: app-base-core
 Requires: app-base-core >= 1:1.5.32
-Requires: app-network-core
+Requires: app-network-core >= 1:2.2.4
 Requires: app-tasks-core
 
 %description core
@@ -41,6 +41,7 @@ install -d -m 0755 %{buildroot}/var/clearos/configuration_backup
 install -d -m 775 %{buildroot}/var/clearos/configuration_backup/upload
 install -D -m 0644 packaging/app-configuration-backup.cron %{buildroot}/etc/cron.d/app-configuration-backup
 install -D -m 0755 packaging/configuration-restore %{buildroot}/usr/sbin/configuration-restore
+install -D -m 0755 packaging/run-app-upgrades %{buildroot}/usr/sbin/run-app-upgrades
 
 %post
 logger -p local6.notice -t installer 'app-configuration-backup - installing'
@@ -86,3 +87,4 @@ exit 0
 /usr/clearos/apps/configuration_backup/libraries
 /etc/cron.d/app-configuration-backup
 /usr/sbin/configuration-restore
+/usr/sbin/run-app-upgrades

@@ -5,6 +5,7 @@
 
 /usr/sbin/addsudo /bin/tar app-configuration-backup
 /usr/sbin/addsudo /usr/sbin/configuration-restore app-configuration-backup
+/usr/sbin/addsudo /usr/sbin/run-app-upgrades app-configuration-backup
 
 # Fix truncated backup archive filenames from an older release
 ARCHIVES=$(find /var/clearos/configuration_backup -name '*.tgz' |\
