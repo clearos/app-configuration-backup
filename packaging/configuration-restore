@@ -51,9 +51,11 @@ clearos_load_language('configuration_backup');
 // Classes
 //--------
 
+use \clearos\apps\base\Daemon as Daemon;
 use \clearos\apps\base\Script as Script;
 use \clearos\apps\configuration_backup\Configuration_Backup as Configuration_Backup;
 
+clearos_load_library('base/Daemon');
 clearos_load_library('base/Script');
 clearos_load_library('configuration_backup/Configuration_Backup');
 
@@ -134,4 +136,11 @@ try {
 } catch (Exception $e) {
     $configuration_backup->update_status(-1, 0, clearos_exception_message($e), $output);
     $script->unlock();
+
+    // Make sure clearsync is running again if something goes horribly wrong
+    $daemon = new Daemon('clearsync');
+    if ($daemon->is_installed()) {
+        $daemon->set_running_state(TRUE);
+        $daemon->set_boot_state(TRUE);
+    }
 }
