@@ -1482,7 +1482,7 @@ class Configuration_Backup extends Engine
             foreach ($folder_exclude as $folder_name) {
                 $folder = new Folder(self::FOLDER_RESTORE . '/' . $folder_name);
                 if ($folder->exists())
-                $folder->delete(TRUE);
+                    $folder->delete(TRUE);
             }
 
             foreach ($file_exclude as $file_name) {
