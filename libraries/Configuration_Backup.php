@@ -1460,6 +1460,9 @@ class Configuration_Backup extends Engine
             $file_exclude = array(
                 '/etc/amavisd.conf',
                 '/etc/clearos/network.conf',
+                '/etc/clearos/ibvpn.d/route-down.sh',
+                '/etc/clearos/ibvpn.d/route-up.sh',
+                '/etc/clearos/ibvpn.d/ibvpn.com.crt',
                 '/etc/httpd/conf/httpd.conf',
                 '/etc/mail/spamassassin/app-mail-antispam.cf',
                 '/etc/mail/spamassassin/init.pre',
