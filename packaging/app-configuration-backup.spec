@@ -1,7 +1,7 @@
 
 Name: app-configuration-backup
 Epoch: 1
-Version: 2.2.2
+Version: 2.3.20
 Release: 1%{dist}
 Summary: Configuration Backup and Restore
 License: GPLv3
@@ -79,6 +79,7 @@ exit 0
 %files core
 %defattr(-,root,root)
 %exclude /usr/clearos/apps/configuration_backup/packaging
+%exclude /usr/clearos/apps/configuration_backup/unify.json
 %dir /usr/clearos/apps/configuration_backup
 %dir /var/clearos/configuration_backup
 %dir %attr(775,root,webconfig) /var/clearos/configuration_backup/upload
