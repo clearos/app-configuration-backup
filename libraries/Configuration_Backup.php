@@ -1188,17 +1188,20 @@ class Configuration_Backup extends Engine
         }
 
         $exclude_daemons = array(
+            'autovt@',
             'auditd',
             'chronyd',
             'cloud-init',
             'clearsync',
             'dmraid-activation',
             'kdump',
+            'fetchmail',
             'getty@',
             'irqbalance',
             'iscsi',
             'lvm2-monitor',
             'mdmonitor',
+            'microcode',
             'multipathd',
             'messagebus',
             'netfs',
