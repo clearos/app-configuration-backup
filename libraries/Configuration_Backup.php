@@ -1201,6 +1201,8 @@ class Configuration_Backup extends Engine
 
         $exclude_daemons = array(
             'autovt@',
+            'arpwatch',
+            'arpwatch@',
             'auditd',
             'chronyd',
             'cloud-init',
