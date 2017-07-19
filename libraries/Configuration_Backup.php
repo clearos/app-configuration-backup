@@ -1107,9 +1107,6 @@ class Configuration_Backup extends Engine
             }
         } catch (File_Not_Found_Exception $e) {
             $this->update_status(0, 50, lang('configuration_backup_older_version_warn'), $output);
-        } catch (Exception $e) {
-            // Report it, but keep going
-            $this->update_status(0, 50, clearos_exception_message($e), $output);
         }
         
         // Reload the LDAP database
