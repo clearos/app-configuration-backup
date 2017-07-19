@@ -983,6 +983,11 @@ class Configuration_Backup extends Engine
     {
         clearos_profile(__METHOD__, __LINE__);
 
+        $ignore_list = [
+            'app-network-detail-report',
+            'app-network-detail-report-core'
+        ];
+
         $this->update_status(0, 5, lang('base_initializing'), $output);
         $this->update_status(0, 10, lang('configuration_backup_stopping_event_system'), $output);
 
@@ -1062,7 +1067,14 @@ class Configuration_Backup extends Engine
         try {
             $this->update_status(0, 30, lang('configuration_backup_download_and_intstall_apps'), $output);
             $file = new File(Configuration_Backup::FILE_INSTALLED_APPS);
-            $list = $file->get_contents_as_array();
+            $raw_list = $file->get_contents_as_array();
+
+            $list = Array();
+            foreach ($raw_list as $item) {
+                if (! in_array($item, $ignore_list))
+                    $list[] = $item;
+            }
+
             $yum = new Yum();
             $counter = 0;
 
