@@ -1,7 +1,7 @@
 
 Name: app-configuration-backup
 Epoch: 1
-Version: 2.3.24
+Version: 2.3.25
 Release: 1%{dist}
 Summary: Configuration Backup and Restore
 License: GPLv3
