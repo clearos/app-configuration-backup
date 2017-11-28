@@ -1170,10 +1170,8 @@ class Configuration_Backup extends Engine
         // Run upgrade scripts
         //--------------------
 
-        if ($restore_type === self::RELEASE_UPGRADE_6) {
-            clearos_log('configuration-backup', 'Running app upgrades');
-            $this->_run_upgrade_scripts();
-        }
+        clearos_log('configuration-backup', 'Running app upgrades');
+        $this->_run_upgrade_scripts();
 
         // Restart services
         //-----------------
